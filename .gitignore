@@ -8,5 +8,7 @@ app/build/
 *.jks
 *.keystore
 *.apk
+!downloads/uma-seed-searcher-android-latest.apk
 *.aab
 captures/
+.update-*.png

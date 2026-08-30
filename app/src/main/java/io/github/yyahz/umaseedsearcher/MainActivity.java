@@ -405,10 +405,9 @@ public final class MainActivity extends Activity {
             File updateFile = new File(getCacheDir(), UpdateFileProvider.FILE_NAME);
             HttpURLConnection connection = null;
             try {
-                String fileName = "uma-seed-searcher-android-v" + normalizedVersion + "-debug.apk";
                 URL releaseUrl = new URL(
-                    "https://github.com/yyahz/umamusume-seed-searcher-android/releases/download/v"
-                        + normalizedVersion + "/" + fileName
+                    "https://raw.githubusercontent.com/yyahz/umamusume-seed-searcher-android/main/"
+                        + "downloads/uma-seed-searcher-android-latest.apk?version=" + normalizedVersion
                 );
                 connection = openReleaseConnection(releaseUrl);
                 long expected = connection.getContentLengthLong();
@@ -441,7 +440,7 @@ public final class MainActivity extends Activity {
             } catch (Exception error) {
                 temporary.delete();
                 updateFile.delete();
-                notifyUpdateStatus("error", "更新失败，请稍后重试");
+                notifyUpdateStatus("error", "下载失败，请检查网络");
             } finally {
                 updateDownloadInProgress = false;
                 if (connection != null) connection.disconnect();
@@ -454,8 +453,8 @@ public final class MainActivity extends Activity {
         for (int redirects = 0; redirects <= 5; redirects += 1) {
             if (!isTrustedReleaseUrl(current)) throw new IOException("Untrusted update URL");
             HttpURLConnection connection = (HttpURLConnection) current.openConnection();
-            connection.setConnectTimeout(10_000);
-            connection.setReadTimeout(20_000);
+            connection.setConnectTimeout(30_000);
+            connection.setReadTimeout(45_000);
             connection.setUseCaches(false);
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("User-Agent", "UmaSeedSearcher-Android");
@@ -477,6 +476,7 @@ public final class MainActivity extends Activity {
         if (!"https".equalsIgnoreCase(url.getProtocol())) return false;
         String host = url.getHost().toLowerCase(Locale.ROOT);
         return host.equals("github.com")
+            || host.equals("raw.githubusercontent.com")
             || host.equals("objects.githubusercontent.com")
             || host.equals("release-assets.githubusercontent.com");
     }
@@ -650,11 +650,13 @@ public final class MainActivity extends Activity {
             );
             String shim = "(() => {"
                 + "const icon=" + quoteJs(iconDataUrl) + ";"
-                + "const storage={local:{"
+                + "const area=(store,prefix)=>({"
                 + "get:(key)=>{const keys=Array.isArray(key)?key:[key];const out={};"
-                + "for(const k of keys){try{const raw=localStorage.getItem('uma-app:'+k);if(raw!==null)out[k]=JSON.parse(raw);}catch(_){}}return Promise.resolve(out);},"
-                + "set:(values)=>{for(const [k,v] of Object.entries(values||{})){try{localStorage.setItem('uma-app:'+k,JSON.stringify(v));}catch(_){}}return Promise.resolve();}"
-                + "}};"
+                + "for(const k of keys){try{const raw=store.getItem(prefix+k);if(raw!==null)out[k]=JSON.parse(raw);}catch(_){}}return Promise.resolve(out);},"
+                + "set:(values)=>{for(const [k,v] of Object.entries(values||{})){try{store.setItem(prefix+k,JSON.stringify(v));}catch(_){}}return Promise.resolve();}"
+                + "});"
+                + "const storage={local:area(localStorage,'uma-app:'),session:area(sessionStorage,'uma-app-session:')};"
+                + "globalThis.__UMA_SEED_ANDROID_APP__=true;"
                 + "globalThis.chrome={...(globalThis.chrome||{}),runtime:{getURL:()=>icon},storage};"
                 + "})();";
             evaluateSequence(0, shim);

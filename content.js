@@ -13,6 +13,7 @@
   const REQUEST_CHANNEL = "UMA_SEED_OPTIMIZER_REQUEST_V1";
   const RESPONSE_CHANNEL = "UMA_SEED_OPTIMIZER_RESPONSE_V1";
   const STORAGE_KEY = "umaSeedOptimizerPreferencesV1";
+  const SESSION_STORAGE_KEY = "umaSeedOptimizerSessionV1";
   const MANY_FACTOR_COOLDOWN_THRESHOLD = 15;
   const searchGuard = requestGuard?.createSearchRequestGuard();
   let cooldownRenderTimer = null;
@@ -148,23 +149,56 @@
     return factorVisualMeta({ colorId: state.activeColor, subtype: state.activeSubtype });
   }
 
-  function preferenceDocument() {
+  function persistentPreferenceDocument() {
     return {
       colorOrder: [...state.colorOrder],
-      cardIds: [...state.selectedRoleIds],
-      desiredFactors: [...state.selected.values()].map((item) => ({ ...item })),
       depth: state.depth,
       filterFull: state.filterFull
     };
   }
 
+  function sessionPreferenceDocument() {
+    return {
+      cardIds: [...state.selectedRoleIds],
+      desiredFactors: [...state.selected.values()].map((item) => ({ ...item }))
+    };
+  }
+
+  function preferenceDocument() {
+    return { ...persistentPreferenceDocument(), ...sessionPreferenceDocument() };
+  }
+
   function savePreferences() {
+    if (globalThis.__UMA_SEED_ANDROID_APP__ && chrome.storage.session) {
+      chrome.storage.local.set({ [STORAGE_KEY]: persistentPreferenceDocument() });
+      chrome.storage.session.set({ [SESSION_STORAGE_KEY]: sessionPreferenceDocument() });
+      return;
+    }
     chrome.storage.local.set({ [STORAGE_KEY]: preferenceDocument() });
   }
 
   async function loadPreferences() {
     const document = await chrome.storage.local.get(STORAGE_KEY);
-    const stored = document[STORAGE_KEY] || {};
+    const persistent = document[STORAGE_KEY] || {};
+    let stored = persistent;
+    if (globalThis.__UMA_SEED_ANDROID_APP__ && chrome.storage.session) {
+      const sessionDocument = await chrome.storage.session.get(SESSION_STORAGE_KEY);
+      const session = sessionDocument[SESSION_STORAGE_KEY];
+      const legacySession = {
+        cardIds: persistent.cardIds,
+        desiredFactors: persistent.desiredFactors
+      };
+      stored = { ...persistent, ...(session || legacySession) };
+      chrome.storage.local.set({ [STORAGE_KEY]: {
+        colorOrder: persistent.colorOrder,
+        depth: persistent.depth,
+        filterFull: persistent.filterFull
+      } });
+      chrome.storage.session.set({ [SESSION_STORAGE_KEY]: {
+        cardIds: Array.isArray(stored.cardIds) ? stored.cardIds : [],
+        desiredFactors: Array.isArray(stored.desiredFactors) ? stored.desiredFactors : []
+      } });
+    }
     state.colorOrder = ranking.normalizeColorOrder(stored.colorOrder);
     state.selectedRoleIds = new Set(
       (Array.isArray(stored.cardIds) ? stored.cardIds : [])

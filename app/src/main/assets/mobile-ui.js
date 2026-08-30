@@ -17,7 +17,7 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.34";
+  const APP_VERSION = "0.1.35";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
@@ -508,9 +508,9 @@
     if (!section) return;
     const busy = ["checking", "downloading", "ready", "permission", "installer"].includes(updateCheck.state);
     const installAction = updateCheck.url
-      ? `<button class="mobile-update-install" type="button" data-mobile-install-update ${busy ? "disabled" : ""}>${updateCheck.state === "downloading" ? "下载中…" : "更新新版"}</button>`
+      ? `<button class="mobile-update-install" type="button" data-mobile-install-update ${busy ? "disabled" : ""}>${updateCheck.state === "downloading" ? "下载中…" : "立即更新"}</button>`
       : "";
-    section.innerHTML = `<div class="section-head"><div><h2>应用设置</h2><p class="helper">版本与更新</p></div></div><div class="mobile-update-card"><div class="mobile-update-icon">${ICONS.settings}</div><div class="mobile-update-copy"><b>种马搜索器</b><span>当前版本 v${APP_VERSION}</span></div><button type="button" data-mobile-check-update ${busy ? "disabled" : ""}>${updateCheck.state === "checking" ? "检查中…" : "检查更新"}</button><p class="mobile-update-status" data-update-state="${updateCheck.state}" role="status"></p>${installAction}</div><a class="mobile-project-link" href="${PROJECT_URL}" rel="noopener noreferrer">打开 GitHub 项目页</a>`;
+    section.innerHTML = `<div class="section-head"><div><h2>应用设置</h2><p class="helper">版本与更新</p></div></div><div class="mobile-update-card"><div class="mobile-update-icon">${ICONS.settings}</div><div class="mobile-update-copy"><b>种马搜索器</b><span>当前版本 v${APP_VERSION}</span></div><button type="button" data-mobile-check-update ${busy ? "disabled" : ""}>${updateCheck.state === "checking" ? "检查中…" : "检查更新"}</button><div class="mobile-update-footer"><p class="mobile-update-status" data-update-state="${updateCheck.state}" role="status"></p>${installAction}</div></div><a class="mobile-project-link" href="${PROJECT_URL}" rel="noopener noreferrer">打开 GitHub 项目页</a>`;
     section.querySelector(".mobile-update-status").textContent = updateCheck.message;
   }
 
@@ -535,7 +535,7 @@
       section.dataset.mobileSection = "settings";
       ui.body.appendChild(section);
     }
-    section.innerHTML = `<div class="section-head"><div><h2>数据与服务声明</h2><p class="helper">本工具的资料参考与搜索依托</p></div></div><div class="mobile-statement-list"><a href="${BWIKI_URL}" rel="noopener noreferrer"><span><b>数据来源</b><small>赛马娘 BWIKI</small></span><strong>查看</strong></a><a href="${TOOL_EXTERNAL_URL}" rel="noopener noreferrer"><span><b>搜索依托</b><small>吗哩吗哩工具箱</small></span><strong>打开</strong></a></div>`;
+    section.innerHTML = `<div class="section-head"><div><h2>数据与服务声明</h2><p class="helper">本工具的资料参考与搜索依托</p></div></div><div class="mobile-statement-list"><a href="${BWIKI_URL}" rel="noopener noreferrer"><span><b>数据来源</b><small>赛马娘 BWIKI</small></span><strong>打开</strong></a><a href="${TOOL_EXTERNAL_URL}" rel="noopener noreferrer"><span><b>搜索依托</b><small>吗哩吗哩工具箱</small></span><strong>打开</strong></a></div>`;
   }
 
   async function checkForUpdates(ui) {
@@ -1215,10 +1215,11 @@
       :host([data-mobile-ui="true"]) .mobile-update-copy span { color:var(--muted); font-size:11px; }
       :host([data-mobile-ui="true"]) [data-mobile-check-update] { min-height:44px; border:0; border-radius:11px; padding:0 11px; color:var(--brand-dark); background:#eaf7ef; font-size:11px; font-weight:800; white-space:nowrap; }
       :host([data-mobile-ui="true"]) [data-mobile-check-update]:disabled { opacity:.55; }
-      :host([data-mobile-ui="true"]) .mobile-update-status { grid-column:2 / -1; margin:0; color:var(--muted); font-size:11px; }
+      :host([data-mobile-ui="true"]) .mobile-update-footer { grid-column:2 / -1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+      :host([data-mobile-ui="true"]) .mobile-update-status { min-width:0; margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="available"] { color:var(--brand-dark); font-weight:750; }
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="error"] { color:var(--danger); }
-      :host([data-mobile-ui="true"]) .mobile-update-install { grid-column:2 / -1; min-height:48px; border:0; border-radius:12px; color:#fff; background:var(--brand); font-size:13px; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-update-install { flex:0 0 auto; min-height:44px; border:0; border-radius:11px; padding:0 14px; color:#fff; background:var(--brand); box-shadow:0 3px 9px #0d784824; font-size:11px; font-weight:800; white-space:nowrap; }
       :host([data-mobile-ui="true"]) .mobile-update-install:disabled { opacity:.58; }
       :host([data-mobile-ui="true"]) .mobile-project-link { min-height:48px; display:flex; align-items:center; justify-content:center; margin-top:10px; border:1px solid var(--line); border-radius:13px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; text-decoration:none; }
       :host([data-mobile-ui="true"]) .mobile-data-statement { padding:16px; }
