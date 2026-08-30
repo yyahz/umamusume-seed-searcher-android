@@ -20,6 +20,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
 import android.webkit.WebChromeClient;
+import android.webkit.WebBackForwardList;
+import android.webkit.WebHistoryItem;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -79,7 +81,12 @@ public final class MainActivity extends Activity {
         if (savedInstanceState == null) {
             webView.loadUrl(TOOL_URL);
         } else {
-            webView.restoreState(savedInstanceState);
+            WebBackForwardList restored = webView.restoreState(savedInstanceState);
+            WebHistoryItem current = restored == null ? null : restored.getCurrentItem();
+            Uri restoredUri = current == null ? null : Uri.parse(current.getUrl());
+            if (restoredUri == null || (!isToolPage(restoredUri) && !isAuthenticationPage(restoredUri))) {
+                webView.loadUrl(TOOL_URL);
+            }
         }
     }
 
@@ -225,8 +232,17 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
+                if (!request.isForMainFrame()) return false;
+                if (isBilibiliAppLink(uri)) {
+                    returnToTool(view);
+                    return true;
+                }
                 if (isExternalToolRequest(uri)) {
                     openExternal(Uri.parse("https://game.bilibili.com/tool/pd/"));
+                    return true;
+                }
+                if (isBilibiliLandingPage(uri)) {
+                    returnToTool(view);
                     return true;
                 }
                 if (isTrustedBilibiliPage(uri)) return false;
@@ -244,7 +260,12 @@ public final class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (isToolPage(Uri.parse(url))) injectExtension();
+                Uri uri = Uri.parse(url);
+                if (isToolPage(uri)) {
+                    injectExtension();
+                } else if (isBilibiliLandingPage(uri)) {
+                    returnToTool(view);
+                }
             }
 
             @Override
@@ -320,6 +341,47 @@ public final class MainActivity extends Activity {
             && "game.bilibili.com".equalsIgnoreCase(uri.getHost())
             && uri.getPath() != null
             && uri.getPath().startsWith("/tool/pd");
+    }
+
+    private boolean isAuthenticationPage(Uri uri) {
+        if (!isTrustedBilibiliPage(uri)) return false;
+        String host = uri.getHost();
+        String path = uri.getPath();
+        String normalizedHost = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
+        String normalizedPath = path == null ? "" : path.toLowerCase(java.util.Locale.ROOT);
+        return normalizedHost.contains("passport")
+            || normalizedHost.startsWith("account.")
+            || normalizedHost.startsWith("login.")
+            || normalizedPath.contains("/passport/")
+            || normalizedPath.contains("/login/");
+    }
+
+    private boolean isBilibiliLandingPage(Uri uri) {
+        if (!isTrustedBilibiliPage(uri) || isToolPage(uri) || isAuthenticationPage(uri)) return false;
+        String host = uri.getHost();
+        String path = uri.getPath();
+        String normalizedHost = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
+        String normalizedPath = path == null || path.isEmpty() ? "/" : path.toLowerCase(java.util.Locale.ROOT);
+        boolean landingHost = normalizedHost.equals("bilibili.com")
+            || normalizedHost.equals("www.bilibili.com")
+            || normalizedHost.equals("m.bilibili.com")
+            || normalizedHost.equals("game.bilibili.com");
+        return landingHost && (normalizedPath.equals("/") || normalizedPath.equals("/index.html"));
+    }
+
+    private boolean isBilibiliAppLink(Uri uri) {
+        String scheme = uri.getScheme();
+        if (scheme == null) return false;
+        String normalized = scheme.toLowerCase(java.util.Locale.ROOT);
+        return normalized.equals("bilibili")
+            || normalized.equals("biligame")
+            || normalized.equals("intent");
+    }
+
+    private void returnToTool(WebView view) {
+        CookieManager.getInstance().flush();
+        if (!TOOL_URL.equals(view.getUrl())) view.loadUrl(TOOL_URL);
+        else view.reload();
     }
 
     private boolean isExternalToolRequest(Uri uri) {
