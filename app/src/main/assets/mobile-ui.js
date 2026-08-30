@@ -17,9 +17,11 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.29";
+  const APP_VERSION = "0.1.30";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
+  const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
+  const TOOL_EXTERNAL_URL = "https://game.bilibili.com/tool/pd/?uma_seed_external=1";
 
   let activePage = "roles";
   let rolePage = 0;
@@ -515,6 +517,18 @@
     renderAppSettings(section);
   }
 
+  function ensureDataStatementSection(ui) {
+    let section = ui.body.querySelector("[data-mobile-data-statement]");
+    if (!section) {
+      section = document.createElement("section");
+      section.className = "section mobile-data-statement";
+      section.dataset.mobileDataStatement = "";
+      section.dataset.mobileSection = "settings";
+      ui.body.appendChild(section);
+    }
+    section.innerHTML = `<div class="section-head"><div><h2>数据与服务声明</h2><p class="helper">本工具的资料参考与搜索依托</p></div></div><div class="mobile-statement-list"><a href="${BWIKI_URL}" rel="noopener noreferrer"><span><b>数据来源</b><small>赛马娘 BWIKI</small></span><strong>查看</strong></a><a href="${TOOL_EXTERNAL_URL}" rel="noopener noreferrer"><span><b>搜索依托</b><small>吗哩吗哩工具箱</small></span><strong>打开</strong></a></div>`;
+  }
+
   async function checkForUpdates(ui) {
     if (updateCheck.state === "checking") return;
     updateCheck = { state: "checking", message: "正在读取 GitHub 版本信息…", latest: "", url: "" };
@@ -591,6 +605,7 @@
 
     ensureEmptyResults(ui, Boolean(resultsSection));
     ensureAppSettingsSection(ui);
+    ensureDataStatementSection(ui);
     updateRolePagination(ui);
     updateNavigation(ui);
   }
@@ -676,10 +691,12 @@
         background:#edf7f1;
         box-shadow:none;
       }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-header,
+      :host([data-mobile-ui="true"][data-mobile-page="results"]) .panel-header,
+      :host([data-mobile-ui="true"][data-mobile-page="settings"]) .panel-header { display:none; }
       :host([data-mobile-ui="true"]) h1 { font-size:18px; }
       :host([data-mobile-ui="true"]) .brand-credit { color:var(--muted); font-size:9px; opacity:.78; }
-      :host([data-mobile-ui="true"]) .subtitle { margin-top:1px; color:var(--muted); font-size:11px; }
-      :host([data-mobile-ui="true"]) .subtitle { display:grid; gap:0; }
+      :host([data-mobile-ui="true"]) .subtitle { display:none; }
       :host([data-mobile-ui="true"]) .source-link { min-height:18px; color:var(--brand-dark); line-height:1.35; }
       :host([data-mobile-ui="true"]) #close { display:none!important; }
       :host([data-mobile-ui="true"]) .panel-body {
@@ -1185,6 +1202,15 @@
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="error"] { color:var(--danger); }
       :host([data-mobile-ui="true"]) .mobile-update-link { grid-column:2 / -1; width:max-content; color:var(--brand-dark); font-size:12px; font-weight:800; }
       :host([data-mobile-ui="true"]) .mobile-project-link { min-height:48px; display:flex; align-items:center; justify-content:center; margin-top:10px; border:1px solid var(--line); border-radius:13px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; text-decoration:none; }
+      :host([data-mobile-ui="true"]) .mobile-data-statement { padding:16px; }
+      :host([data-mobile-ui="true"]) .mobile-data-statement .section-head { margin-bottom:10px; }
+      :host([data-mobile-ui="true"]) .mobile-statement-list { overflow:hidden; border:1px solid var(--line); border-radius:16px; background:#fff; }
+      :host([data-mobile-ui="true"]) .mobile-statement-list a { min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; color:var(--ink); text-decoration:none; }
+      :host([data-mobile-ui="true"]) .mobile-statement-list a + a { border-top:1px solid var(--line); }
+      :host([data-mobile-ui="true"]) .mobile-statement-list span { min-width:0; display:grid; gap:2px; }
+      :host([data-mobile-ui="true"]) .mobile-statement-list b { font-size:13px; }
+      :host([data-mobile-ui="true"]) .mobile-statement-list small { overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .mobile-statement-list strong { flex:0 0 auto; color:var(--brand-dark); font-size:12px; }
       @media (max-width:370px) {
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
