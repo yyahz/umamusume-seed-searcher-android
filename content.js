@@ -590,7 +590,8 @@
 
   function renderFactorCatalog(query = state.factorQuery) {
     const matches = filteredCatalogFactors(query);
-    const pageSize = 8;
+    const paginated = state.activeColor !== "red";
+    const pageSize = paginated ? 8 : Math.max(1, matches.length);
     const maxOffset = Math.max(0, Math.floor((Math.max(1, matches.length) - 1) / pageSize) * pageSize);
     const offset = Math.min(state.catalogOffset, maxOffset);
     if (state.catalogOffset !== offset) state.catalogOffset = offset;
@@ -614,7 +615,7 @@
     const currentPage = Math.floor(offset / pageSize) + 1;
     return `<div class="catalog-head"><span>具体可选项</span><span>${matches.length ? `${offset + 1}–${offset + visible.length}` : 0} / ${matches.length}</span></div>
       <div class="factor-catalog" id="factor-catalog">${items}</div>
-      ${matches.length > pageSize ? `<div class="catalog-pagination"><button class="catalog-page-button" type="button" data-catalog-page="previous" ${offset === 0 ? "disabled" : ""}>上一批</button><span>${currentPage} / ${pageCount}</span><button class="catalog-page-button" type="button" data-catalog-page="next" ${offset + pageSize >= matches.length ? "disabled" : ""}>下一批</button></div>` : ""}`;
+      ${paginated && matches.length > pageSize ? `<div class="catalog-pagination"><button class="catalog-page-button" type="button" data-catalog-page="previous" ${offset === 0 ? "disabled" : ""}>上一批</button><span>${currentPage} / ${pageCount}</span><button class="catalog-page-button" type="button" data-catalog-page="next" ${offset + pageSize >= matches.length ? "disabled" : ""}>下一批</button></div>` : ""}`;
   }
 
   function recognitionMessage(value) {
@@ -859,16 +860,10 @@
       ...(additionalByColor.get(colorId) || [])
     ]);
     const requestedOther = otherColorOrder.flatMap((colorId) => requestedByColor.get(colorId) || []);
-    const additionalOtherCount = otherColorOrder.reduce((sum, colorId) => sum + (additionalByColor.get(colorId)?.length || 0), 0);
-    const additionalGroups = otherColorOrder.map((colorId) => {
-      const factors = additionalByColor.get(colorId) || [];
-      if (!factors.length) return "";
-      const meta = COLOR_META[colorId];
-      return `<div class="result-factor-group other-factors" style="--factor-color:${meta.color};--factor-soft:${meta.soft}"><div class="result-factor-label"><b>其他${meta.name}</b><span>${factors.length} 项</span></div><div class="factor-chip-list">${factors.join("")}</div></div>`;
-    }).join("");
-    return `${blueRed.length ? `<div class="result-factor-group base-factors"><div class="result-factor-label"><b>蓝红因子</b><span>${blueRed.length} 项，固定蓝在红前</span></div><div class="factor-chip-list">${blueRed.join("")}</div></div>` : ""}
-      ${requestedOther.length ? `<div class="result-factor-group selected-factors"><div class="result-factor-label"><b>筛选的其他因子</b><span>${requestedOther.length} 项</span></div><div class="factor-chip-list">${requestedOther.join("")}</div></div>` : ""}
-      ${additionalOtherCount ? `<div class="result-factor-label result-other-heading"><b>该种马其他因子</b><span>${additionalOtherCount} 项，全部展示</span></div>${additionalGroups}` : ""}`;
+    const additionalOther = otherColorOrder.flatMap((colorId) => additionalByColor.get(colorId) || []);
+    const otherFactors = [...requestedOther, ...additionalOther];
+    return `${blueRed.length ? `<div class="result-factor-group base-factors"><div class="factor-chip-list">${blueRed.join("")}</div></div>` : ""}
+      ${otherFactors.length ? `<div class="result-factor-group other-factors"><div class="result-factor-label result-other-heading"><b>其他因子</b><span>${otherFactors.length} 项，全部展示</span></div><div class="factor-chip-list">${otherFactors.join("")}</div></div>` : ""}`;
   }
 
   function renderResults() {
