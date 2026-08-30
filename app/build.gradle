@@ -44,8 +44,8 @@ android {
         applicationId "io.github.yyahz.umaseedsearcher"
         minSdk 24
         targetSdk 35
-        versionCode 40
-        versionName "0.1.39"
+        versionCode 41
+        versionName "0.1.40"
     }
 
     sourceSets {

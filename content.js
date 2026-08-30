@@ -1325,6 +1325,12 @@
   }
 
   function bindRenderedEvents() {
+    const restoreCatalogSearchFocus = (inputId, placeCaret = false) => {
+      if (shadow.host.dataset.mobileUi === "true") return;
+      const input = shadow.getElementById(inputId);
+      input?.focus();
+      if (placeCaret && input) input.setSelectionRange(input.value.length, input.value.length);
+    };
     const bulkInput = shadow.getElementById("bulk-factor-input");
     const recognizeButton = shadow.getElementById("recognize-factor-text");
     bulkInput?.addEventListener("input", () => {
@@ -1362,7 +1368,7 @@
     shadow.querySelectorAll("[data-role-rarity]").forEach((button) => button.addEventListener("click", () => {
       state.roleRarity = button.dataset.roleRarity;
       render();
-      shadow.getElementById("role-search")?.focus();
+      restoreCatalogSearchFocus("role-search");
     }));
     const roleSearch = shadow.getElementById("role-search");
     roleSearch?.addEventListener("input", () => {
@@ -1377,13 +1383,13 @@
       else state.selectedRoleIds.add(cardId);
       savePreferences();
       render();
-      shadow.getElementById("role-search")?.focus();
+      restoreCatalogSearchFocus("role-search");
     });
     shadow.getElementById("clear-roles")?.addEventListener("click", () => {
       state.selectedRoleIds.clear();
       savePreferences();
       render();
-      shadow.getElementById("role-search")?.focus();
+      restoreCatalogSearchFocus("role-search");
     });
     shadow.querySelectorAll(".factor-tab").forEach((button) => button.addEventListener("click", () => {
       state.activeColor = button.dataset.tab;
@@ -1396,7 +1402,7 @@
       state.activeSubtype = button.dataset.subtype;
       state.catalogOffset = 0;
       render();
-      shadow.getElementById("factor-search")?.focus();
+      restoreCatalogSearchFocus("factor-search");
     }));
     const searchInput = shadow.getElementById("factor-search");
     searchInput?.addEventListener("input", () => {
@@ -1417,9 +1423,7 @@
         state.selected.delete(selectedKey);
         savePreferences();
         render();
-        const nextSearch = shadow.getElementById("factor-search");
-        nextSearch?.focus();
-        nextSearch?.setSelectionRange(nextSearch.value.length, nextSearch.value.length);
+        restoreCatalogSearchFocus("factor-search", true);
         return;
       }
       const key = event.target.closest("[data-add-factor]")?.dataset.addFactor;
@@ -1436,9 +1440,7 @@
       });
       savePreferences();
       render();
-      const nextSearch = shadow.getElementById("factor-search");
-      nextSearch?.focus();
-      nextSearch?.setSelectionRange(nextSearch.value.length, nextSearch.value.length);
+      restoreCatalogSearchFocus("factor-search", true);
     });
     shadow.querySelectorAll("[data-total-star-key]").forEach((select) => select.addEventListener("change", () => {
       const item = state.selected.get(select.dataset.totalStarKey);
