@@ -865,7 +865,7 @@
         ${state.loadingRoles ? '<div class="loading-line" aria-label="正在加载角色目录"></div>' : renderRoleSelector()}
       </section>
       <section class="section">
-        <div class="section-head"><div><h2>2. 拖动颜色优先度</h2><p class="helper">可一次拖到任意位置；综合分相同时也会严格按本顺序逐色比较。触屏或键盘用户可用右侧上下按钮。</p></div></div>
+        <div class="section-head"><div><h2>2. 拖动颜色优先度</h2><p class="helper">按住每行中间的因子名称上下拖动；综合分相同时会严格按本顺序逐色比较，也可使用右侧上下按钮。</p></div></div>
         <ol class="priority-list" id="priority-list">${renderColorOrder()}</ol>
       </section>
       <section class="section">
@@ -903,9 +903,28 @@
     const order = [...state.colorOrder];
     order.splice(current, 1);
     order.splice(next, 0, colorId);
-    state.colorOrder = order;
+    updateColorOrder(order);
+  }
+
+  function updateColorOrder(order) {
+    if (!Array.isArray(order) || order.length !== state.colorOrder.length) return;
+    const knownColors = new Set(state.colorOrder);
+    if (new Set(order).size !== order.length || order.some((colorId) => !knownColors.has(colorId))) return;
+    const body = shadow.getElementById("body");
+    const list = shadow.getElementById("priority-list");
+    const savedTop = body?.scrollTop || 0;
+    shadow.activeElement?.blur();
+    state.colorOrder = [...order];
     savePreferences();
-    render();
+    if (!list) return;
+    list.innerHTML = renderColorOrder();
+    bindPriorityControls(list);
+    if (body) {
+      body.scrollTop = savedTop;
+      requestAnimationFrame(() => {
+        body.scrollTop = savedTop;
+      });
+    }
   }
 
   function bindPriorityDrag(list) {
@@ -967,10 +986,14 @@
       const resolved = dropTarget ? { target: dropTarget, placement: dropPlacement } : resolveDrop(event);
       clearDropIndicators();
       if (!resolved?.target || !source || resolved.target === source) return;
-      state.colorOrder = ranking.reorderColor(state.colorOrder, source, resolved.target, resolved.placement);
-      savePreferences();
-      render();
+      updateColorOrder(ranking.reorderColor(state.colorOrder, source, resolved.target, resolved.placement));
     });
+  }
+
+  function bindPriorityControls(list) {
+    bindPriorityDrag(list);
+    list.querySelectorAll(".order-up").forEach((button) => button.addEventListener("click", () => moveColor(button.dataset.color, -1)));
+    list.querySelectorAll(".order-down").forEach((button) => button.addEventListener("click", () => moveColor(button.dataset.color, 1)));
   }
 
   function updateFactorCatalog(query) {
@@ -1237,11 +1260,7 @@
     shadow.getElementById("undo-factor-import")?.addEventListener("click", undoRecognizedFactorImport);
     shadow.getElementById("reset-factors")?.addEventListener("click", resetSelectedFactors);
     const priorityList = shadow.getElementById("priority-list");
-    if (priorityList) {
-      bindPriorityDrag(priorityList);
-      priorityList.querySelectorAll(".order-up").forEach((button) => button.addEventListener("click", () => moveColor(button.dataset.color, -1)));
-      priorityList.querySelectorAll(".order-down").forEach((button) => button.addEventListener("click", () => moveColor(button.dataset.color, 1)));
-    }
+    if (priorityList) bindPriorityControls(priorityList);
     bindFactorTierDrag();
     shadow.querySelectorAll("[data-role-rarity]").forEach((button) => button.addEventListener("click", () => {
       state.roleRarity = button.dataset.roleRarity;
@@ -1480,6 +1499,19 @@
   }
 
   elements.searchButton.addEventListener("click", searchCandidates);
+
+  shadow.addEventListener("uma-seed-color-reorder", (event) => {
+    const colorId = String(event.detail?.color || "");
+    const current = state.colorOrder.indexOf(colorId);
+    const requestedIndex = Number(event.detail?.targetIndex);
+    if (current < 0 || !Number.isInteger(requestedIndex)) return;
+    const targetIndex = Math.min(state.colorOrder.length - 1, Math.max(0, requestedIndex));
+    if (current === targetIndex) return;
+    const order = [...state.colorOrder];
+    order.splice(current, 1);
+    order.splice(targetIndex, 0, colorId);
+    updateColorOrder(order);
+  });
 
   async function initialize() {
     try {
