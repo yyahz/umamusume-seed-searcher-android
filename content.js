@@ -590,7 +590,7 @@
 
   function renderFactorCatalog(query = state.factorQuery) {
     const matches = filteredCatalogFactors(query);
-    const paginated = state.activeColor !== "red";
+    const paginated = state.activeColor === "green" || state.activeColor === "white";
     const pageSize = paginated ? 8 : Math.max(1, matches.length);
     const maxOffset = Math.max(0, Math.floor((Math.max(1, matches.length) - 1) / pageSize) * pageSize);
     const offset = Math.min(state.catalogOffset, maxOffset);
@@ -794,6 +794,7 @@
   function renderConfigurator() {
     const meta = activeFactorVisualMeta();
     const activeWhiteSubtype = state.activeColor === "white" ? WHITE_SUBTYPE_META[state.activeSubtype] : null;
+    const showFactorSearch = state.activeColor === "green" || state.activeColor === "white";
     const searchLabel = activeWhiteSubtype ? `白因子·${activeWhiteSubtype.name}` : meta.name;
     const searchExamples = activeWhiteSubtype?.examples || meta.examples;
     return `
@@ -806,7 +807,7 @@
         }).join("")}</div>
         <div style="--factor-color:${meta.color};--factor-soft:${meta.soft}">
           ${renderSubtypeTabs()}
-          <div class="search-field">${ICONS.search}<input class="search-input" id="factor-search" type="search" value="${escapeHtml(state.factorQuery)}" placeholder="搜索${searchLabel}，如${searchExamples}" aria-label="搜索${searchLabel}，示例：${searchExamples}" autocomplete="off" ${state.loadingFactors ? "disabled" : ""}></div>
+          ${showFactorSearch ? `<div class="search-field">${ICONS.search}<input class="search-input" id="factor-search" type="search" value="${escapeHtml(state.factorQuery)}" placeholder="搜索${searchLabel}，如${searchExamples}" aria-label="搜索${searchLabel}，示例：${searchExamples}" autocomplete="off" ${state.loadingFactors ? "disabled" : ""}></div>` : ""}
           <div class="catalog-shell" id="catalog-shell">${renderFactorCatalog()}</div>
         </div>
       </div>
