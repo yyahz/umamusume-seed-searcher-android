@@ -881,7 +881,7 @@
         <div class="section-head"><div><h2>4. 搜索范围</h2><p class="helper">会在已选角色内合并默认池、高优先组合与单因子候选，再统一重排。</p></div></div>
         <div class="settings">
           <label class="field-label">每组候选页数<select class="select" id="depth"><option value="1" ${state.depth === 1 ? "selected" : ""}>1 页 · 最多 20 位</option><option value="2" ${state.depth === 2 ? "selected" : ""}>2 页 · 最多 40 位（推荐）</option><option value="3" ${state.depth === 3 ? "selected" : ""}>3 页 · 最多 60 位</option></select></label>
-          <label class="field-label">可借状态<span class="toggle"><input id="filter-full" type="checkbox" ${state.filterFull ? "checked" : ""}>过滤关注人数已满</span></label>
+          <label class="field-label">候选可用性<span class="toggle"><input id="filter-full" type="checkbox" ${state.filterFull ? "checked" : ""}>排除关注人数已满</span></label>
           <label class="field-label">候选缓存<span class="toggle"><input id="force-refresh" type="checkbox" ${state.forceRefresh ? "checked" : ""}>本次强制刷新</span></label>
         </div>
       </section>

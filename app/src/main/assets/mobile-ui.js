@@ -309,6 +309,7 @@
     }
     if (factorSection) {
       factorSection.dataset.mobileSection = "factors";
+      factorSection.dataset.mobileFactorOrder = "picker";
       setFactorHeading(factorSection);
       ensureFactorModeSwitch(factorSection, ui);
       ensureFactorEditingHeading(factorSection);
@@ -317,6 +318,7 @@
     }
     if (settingsSection && settingsSection !== resultsSection) {
       settingsSection.dataset.mobileSection = "factors";
+      settingsSection.dataset.mobileFactorOrder = "settings";
       const heading = settingsSection.querySelector(".section-head h2");
       if (heading) heading.textContent = "搜索设置";
     }
@@ -414,6 +416,8 @@
       :host([data-mobile-ui="true"]) .source-link { color:var(--brand-dark); }
       :host([data-mobile-ui="true"]) #close { display:none!important; }
       :host([data-mobile-ui="true"]) .panel-body {
+        display:flex;
+        flex-direction:column;
         overflow-y:auto!important;
         overscroll-behavior-y:contain;
         touch-action:pan-y!important;
@@ -425,6 +429,8 @@
       :host([data-mobile-ui="true"][data-mobile-page="results"]) .panel-body {
         padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-action-height) + 20px + env(safe-area-inset-bottom));
       }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { order:1; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="picker"] { order:2; }
       :host([data-mobile-ui="true"]) #body > .section { display:none; }
       :host([data-mobile-ui="true"][data-mobile-page="roles"]) #body > .section[data-mobile-section~="roles"],
       :host([data-mobile-ui="true"][data-mobile-page="factors"]) #body > .section[data-mobile-section~="factors"],
