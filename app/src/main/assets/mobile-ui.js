@@ -573,6 +573,7 @@
       :host([data-mobile-ui="true"]) .factor-tab { min-height:44px; border-radius:12px; font-size:13px; }
       :host([data-mobile-ui="true"]) .factor-tabs { margin-bottom:8px; }
       :host([data-mobile-ui="true"]) .search-input { min-height:46px; border-radius:13px; font-size:16px; }
+      :host([data-mobile-ui="true"]) #factor-search::placeholder { font-size:12px; }
       :host([data-mobile-ui="true"]) .factor-option { min-height:48px; border-radius:11px; padding:7px 9px; }
       :host([data-mobile-ui="true"]) #factor-catalog {
         grid-template-columns:repeat(2,minmax(0,1fr));

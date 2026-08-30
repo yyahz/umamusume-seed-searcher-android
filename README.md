@@ -2,7 +2,7 @@
 
 “种马搜索器”的独立 Android 轻量版。它在 App 内完成 B 站游戏登录，并提供针对手机屏幕设计的角色、因子和推荐结果界面。
 
-当前版本为 `v0.1.15`，仍处于测试阶段。
+当前版本为 `v0.1.16`，仍处于测试阶段。
 
 ## 功能
 
@@ -28,7 +28,7 @@
 生成的调试安装包位于：
 
 ```text
-app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.15-debug.apk
+app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.16-debug.apk
 ```
 
 如果本机已安装 Gradle 8.9，也可以运行：
