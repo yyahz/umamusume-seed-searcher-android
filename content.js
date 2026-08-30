@@ -45,7 +45,6 @@
     busy: false,
     roleQuery: "",
     roleRarity: "all",
-    roleCatalogLimit: 60,
     selectedRoleIds: new Set(),
     roles: [],
     activeColor: "blue",
@@ -467,9 +466,8 @@
 
   function renderRoleCatalog(query = state.roleQuery) {
     const matches = filteredRoles(query);
-    const visible = matches.slice(0, state.roleCatalogLimit);
-    const items = visible.length
-      ? visible.map((role) => {
+    const items = matches.length
+      ? matches.map((role) => {
         const cardId = String(role.card_id);
         const selected = state.selectedRoleIds.has(cardId);
         const rarity = role.rarity > 0 ? `${"★".repeat(role.rarity)} · ${role.rarity}星` : "未标星";
@@ -479,9 +477,8 @@
         </button>`;
       }).join("")
       : '<div class="selected-empty" style="grid-column:1/-1">没有找到符合条件的角色。</div>';
-    return `<div class="catalog-head"><span>可选角色</span><span>显示 ${visible.length} / ${matches.length}</span></div>
-      <div class="role-catalog" id="role-catalog">${items}</div>
-      ${visible.length < matches.length ? `<button class="catalog-more" id="role-catalog-more" type="button">再显示 ${Math.min(60, matches.length - visible.length)} 项</button>` : ""}`;
+    return `<div class="catalog-head"><span>可选角色</span><span>共 ${matches.length} 个</span></div>
+      <div class="role-catalog" id="role-catalog">${items}</div>`;
   }
 
   function renderRoleSelector() {
@@ -865,7 +862,7 @@
         ${state.loadingRoles ? '<div class="loading-line" aria-label="正在加载角色目录"></div>' : renderRoleSelector()}
       </section>
       <section class="section">
-        <div class="section-head"><div><h2>2. 拖动颜色优先度</h2><p class="helper">按住每行中间的因子名称上下拖动；综合分相同时会严格按本顺序逐色比较，也可使用右侧上下按钮。</p></div></div>
+        <div class="section-head"><div><h2>2. 优先级排序</h2><p class="helper">按住每行中间的因子名称上下拖动；综合分相同时会严格按本顺序逐色比较，也可使用右侧上下按钮。</p></div></div>
         <ol class="priority-list" id="priority-list">${renderColorOrder()}</ol>
       </section>
       <section class="section">
@@ -1264,22 +1261,15 @@
     bindFactorTierDrag();
     shadow.querySelectorAll("[data-role-rarity]").forEach((button) => button.addEventListener("click", () => {
       state.roleRarity = button.dataset.roleRarity;
-      state.roleCatalogLimit = 60;
       render();
       shadow.getElementById("role-search")?.focus();
     }));
     const roleSearch = shadow.getElementById("role-search");
     roleSearch?.addEventListener("input", () => {
-      state.roleCatalogLimit = 60;
       updateRoleCatalog(roleSearch.value);
     });
     const roleCatalogShell = shadow.getElementById("role-catalog-shell");
     roleCatalogShell?.addEventListener("click", (event) => {
-      if (event.target.closest("#role-catalog-more")) {
-        state.roleCatalogLimit += 60;
-        updateRoleCatalog(state.roleQuery);
-        return;
-      }
       const roleOption = event.target.closest("[data-role-id]");
       if (!roleOption) return;
       const cardId = roleOption.dataset.roleId;

@@ -252,7 +252,7 @@
     if (prioritySection) {
       prioritySection.dataset.mobileSection = "roles";
       const heading = prioritySection.querySelector(".section-head h2");
-      if (heading) heading.textContent = "颜色排序";
+      if (heading) heading.textContent = "优先级排序";
     }
     if (factorSection) {
       factorSection.dataset.mobileSection = "factors";
@@ -705,7 +705,7 @@
         ui.root.getElementById("role-catalog")?.scrollIntoView({ block: "nearest" });
         return;
       }
-      if (event.target.closest("[data-role-rarity],#role-catalog-more")) {
+      if (event.target.closest("[data-role-rarity]")) {
         rolePage = 0;
         requestAnimationFrame(() => updateRolePagination(findUi(), true));
       }
