@@ -339,9 +339,26 @@
     editor.setAttribute("role", "dialog");
     editor.setAttribute("aria-modal", "true");
     editor.setAttribute("aria-label", "编辑因子");
-    editor.innerHTML = `<div class="mobile-editor-handle" aria-hidden="true"></div><div class="mobile-editor-head"><div><h3 data-mobile-editor-name>编辑因子</h3><p data-mobile-editor-subtype></p></div><button type="button" data-mobile-editor-close aria-label="关闭">×</button></div><div class="mobile-editor-fields"><label>家系至少<select data-mobile-editor-total></select></label><label>本体至少<select data-mobile-editor-self></select></label><label>优先级<select data-mobile-editor-tier></select></label></div><div class="mobile-editor-actions"><button class="mobile-editor-delete" type="button" data-mobile-editor-delete>删除</button><button type="button" data-mobile-editor-close>取消</button><button class="mobile-editor-save" type="button" data-mobile-editor-save>保存</button></div>`;
+    editor.innerHTML = `<div class="mobile-editor-handle" aria-hidden="true"></div><div class="mobile-editor-head"><div><h3 data-mobile-editor-name>编辑因子</h3><p data-mobile-editor-subtype></p></div></div><div class="mobile-editor-fields"><fieldset><legend>家系至少</legend><div class="mobile-editor-choice-grid total" data-mobile-editor-options="total" role="group" aria-label="家系至少"></div></fieldset><fieldset><legend>本体至少</legend><div class="mobile-editor-choice-grid self" data-mobile-editor-options="self" role="group" aria-label="本体至少"></div></fieldset><fieldset><legend>优先级</legend><div class="mobile-editor-choice-grid tier" data-mobile-editor-options="tier" role="group" aria-label="优先级"></div></fieldset></div><div class="mobile-editor-actions"><button class="mobile-editor-delete" type="button" data-mobile-editor-delete>删除这个因子</button></div>`;
     ui.panel.append(scrim, editor);
     return { scrim, editor };
+  }
+
+  function populateEditorChoices(editor, kind, source) {
+    const container = editor.querySelector(`[data-mobile-editor-options="${kind}"]`);
+    if (!container) return;
+    const selectedValue = source.value;
+    container.replaceChildren(...[...source.options].map((option) => {
+      const button = document.createElement("button");
+      const value = String(option.value);
+      button.type = "button";
+      button.dataset.mobileEditorChoice = kind;
+      button.dataset.value = value;
+      button.textContent = kind === "self" && value === "0" ? "无要求" : option.textContent.trim().split(" · ")[0];
+      button.classList.toggle("selected", value === selectedValue);
+      button.setAttribute("aria-pressed", String(value === selectedValue));
+      return button;
+    }));
   }
 
   function closeFactorEditor(ui) {
@@ -359,15 +376,17 @@
     if (!ui || !key || !total || !self || !tier) return;
     const { editor } = ensureFactorEditor(ui);
     editor.dataset.factorKey = key;
+    editor.dataset.mobileEditorTotal = total.value;
+    editor.dataset.mobileEditorSelf = self.value;
+    editor.dataset.mobileEditorTier = tier.value;
+    editor.dataset.mobileEditorDirty = "false";
     editor.querySelector("[data-mobile-editor-name]").textContent = card.querySelector(".selected-name")?.textContent || "编辑因子";
     editor.querySelector("[data-mobile-editor-subtype]").textContent = card.querySelector(".selected-subtype")?.textContent || "";
-    [["[data-mobile-editor-total]", total], ["[data-mobile-editor-self]", self], ["[data-mobile-editor-tier]", tier]].forEach(([selector, source]) => {
-      const target = editor.querySelector(selector);
-      target.innerHTML = source.innerHTML;
-      target.value = source.value;
-    });
+    populateEditorChoices(editor, "total", total);
+    populateEditorChoices(editor, "self", self);
+    populateEditorChoices(editor, "tier", tier);
     ui.host.dataset.mobileFactorEditorOpen = "true";
-    requestAnimationFrame(() => editor.querySelector("[data-mobile-editor-total]")?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => editor.querySelector('[data-mobile-editor-choice="total"].selected')?.focus({ preventScroll: true }));
   }
 
   function saveFactorEditor(ui) {
@@ -377,9 +396,9 @@
     ui.root.dispatchEvent(new CustomEvent("uma-seed-update-factor", {
       detail: {
         key,
-        minStars: editor.querySelector("[data-mobile-editor-total]")?.value,
-        minSelfStars: editor.querySelector("[data-mobile-editor-self]")?.value,
-        tier: editor.querySelector("[data-mobile-editor-tier]")?.value
+        minStars: editor.dataset.mobileEditorTotal,
+        minSelfStars: editor.dataset.mobileEditorSelf,
+        tier: editor.dataset.mobileEditorTier
       }
     }));
     closeFactorEditor(ui);
@@ -859,6 +878,8 @@
         border-radius:22px 22px 0 0;
         background:#fff;
         box-shadow:0 -16px 40px #1027192e;
+        max-height:calc(100dvh - 64px);
+        overflow:auto;
         transform:translateY(105%);
         transition:transform 180ms ease-out;
       }
@@ -869,14 +890,18 @@
       :host([data-mobile-ui="true"]) .mobile-editor-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }
       :host([data-mobile-ui="true"]) .mobile-editor-head h3 { margin:0; font-size:18px; line-height:1.35; }
       :host([data-mobile-ui="true"]) .mobile-editor-head p { margin:3px 0 0; color:var(--muted); font-size:11px; }
-      :host([data-mobile-ui="true"]) .mobile-editor-head button { width:44px; height:44px; border:0; border-radius:12px; color:var(--muted); background:#f2f5f2; font-size:24px; }
-      :host([data-mobile-ui="true"]) .mobile-editor-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-      :host([data-mobile-ui="true"]) .mobile-editor-fields label { display:grid; gap:5px; color:var(--muted); font-size:10px; font-weight:700; }
-      :host([data-mobile-ui="true"]) .mobile-editor-fields select { min-width:0; min-height:48px; border:1px solid var(--line); border-radius:11px; padding:0 6px; color:var(--ink); background:#fff; font-size:12px; font-weight:750; }
-      :host([data-mobile-ui="true"]) .mobile-editor-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-fields { display:grid; gap:12px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-fields fieldset { min-width:0; display:grid; gap:6px; margin:0; border:0; padding:0; }
+      :host([data-mobile-ui="true"]) .mobile-editor-fields legend { padding:0; color:var(--muted); font-size:11px; font-weight:750; }
+      :host([data-mobile-ui="true"]) .mobile-editor-choice-grid { display:grid; gap:6px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-choice-grid.total { grid-template-columns:repeat(5,minmax(0,1fr)); }
+      :host([data-mobile-ui="true"]) .mobile-editor-choice-grid.self,
+      :host([data-mobile-ui="true"]) .mobile-editor-choice-grid.tier { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      :host([data-mobile-ui="true"]) .mobile-editor-choice-grid button { min-width:0; min-height:48px; border:1px solid var(--line); border-radius:11px; padding:0 4px; color:var(--ink); background:#f8faf8; font-size:12px; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-editor-choice-grid button.selected { color:var(--brand-dark); border-color:var(--brand); background:#e8f7ee; box-shadow:inset 0 0 0 1px var(--brand); }
+      :host([data-mobile-ui="true"]) .mobile-editor-actions { display:grid; grid-template-columns:1fr; }
       :host([data-mobile-ui="true"]) .mobile-editor-actions button { min-height:48px; border:1px solid var(--line); border-radius:12px; color:var(--muted); background:#fff; font-weight:800; }
       :host([data-mobile-ui="true"]) .mobile-editor-actions .mobile-editor-delete { color:var(--danger); border-color:#f0d5d1; background:#fff8f7; }
-      :host([data-mobile-ui="true"]) .mobile-editor-actions .mobile-editor-save { color:#fff; border-color:var(--brand); background:var(--brand); }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { padding:14px; }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .section-head { margin-bottom:10px; }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .section-head h2 { font-size:17px; }
@@ -1129,12 +1154,24 @@
     }, true);
     ui.root.addEventListener("click", (event) => {
       if (event.target.closest("#recognize-factor-text")) recognitionPage = 0;
-      if (event.target.closest(".mobile-factor-editor-scrim,[data-mobile-editor-close]")) {
-        closeFactorEditor(ui);
+      if (event.target.closest(".mobile-factor-editor-scrim")) {
+        const editor = ui.panel.querySelector(".mobile-factor-editor");
+        if (editor?.dataset.mobileEditorDirty === "true") saveFactorEditor(ui);
+        else closeFactorEditor(ui);
         return;
       }
-      if (event.target.closest("[data-mobile-editor-save]")) {
-        saveFactorEditor(ui);
+      const editorChoice = event.target.closest("[data-mobile-editor-choice]");
+      if (editorChoice) {
+        const editor = editorChoice.closest(".mobile-factor-editor");
+        const kind = editorChoice.dataset.mobileEditorChoice;
+        const datasetKey = `mobileEditor${kind[0].toUpperCase()}${kind.slice(1)}`;
+        editor.dataset[datasetKey] = editorChoice.dataset.value;
+        editor.dataset.mobileEditorDirty = "true";
+        editorChoice.parentElement.querySelectorAll("[data-mobile-editor-choice]").forEach((button) => {
+          const selected = button === editorChoice;
+          button.classList.toggle("selected", selected);
+          button.setAttribute("aria-pressed", String(selected));
+        });
         return;
       }
       if (event.target.closest("[data-mobile-editor-delete]")) {
