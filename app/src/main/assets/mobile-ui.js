@@ -469,10 +469,16 @@
     const current = Number(progress?.[1]) || 0;
     const total = Number(progress?.[2]) || 0;
     const percent = total ? Math.max(0, Math.min(100, current / total * 100)) : 0;
-    empty.innerHTML = `${ICONS.results}<h2>${awaitingResults ? "正在寻找合适种马" : "还没有推荐结果"}</h2>${awaitingResults ? `<div class="mobile-search-progress" role="progressbar" aria-label="搜索进度" aria-valuemin="0" aria-valuemax="${total || 1}" aria-valuenow="${current}"><span style="width:${percent}%"></span></div>` : ""}<p data-mobile-result-message></p>`;
-    empty.querySelector("[data-mobile-result-message]").textContent = awaitingResults
-      ? statusText || "正在准备候选查询…"
-      : "先在“因子”中选择条件、确认星级并开始搜索。";
+    empty.classList.toggle("searching", awaitingResults);
+    if (awaitingResults) {
+      const planName = statusText.match(/正在搜索“(.+?)”/)?.[1] || "正在准备查询计划";
+      const candidateCount = Number(statusText.match(/已收集\s*(\d+)\s*位候选/)?.[1]);
+      empty.innerHTML = `<div class="mobile-search-head">${ICONS.results}<h2>正在寻找合适种马</h2><strong>${total ? `${current} / ${total}` : "准备中"}</strong></div><div class="mobile-search-progress" role="progressbar" aria-label="搜索进度 ${current} / ${total || 1}" aria-valuemin="0" aria-valuemax="${total || 1}" aria-valuenow="${current}"><span style="width:${percent}%"></span></div><div class="mobile-search-meta"><span data-mobile-search-plan></span><span data-mobile-search-count></span></div>`;
+      empty.querySelector("[data-mobile-search-plan]").textContent = planName === "正在准备查询计划" ? planName : `当前：${planName}`;
+      empty.querySelector("[data-mobile-search-count]").textContent = Number.isFinite(candidateCount) ? `${candidateCount} 位候选` : "等待候选";
+    } else {
+      empty.innerHTML = `${ICONS.results}<h2>还没有推荐结果</h2><p>先在“因子”中选择条件、确认星级并开始搜索。</p>`;
+    }
   }
 
   function mapSections(ui) {
@@ -1081,8 +1087,16 @@
         background:#eaf7ef;
       }
       :host([data-mobile-ui="true"]) .mobile-results-empty p { max-width:280px; margin:8px 0 0; color:var(--muted); font-size:14px; line-height:1.6; }
-      :host([data-mobile-ui="true"]) .mobile-search-progress { width:min(280px,82%); height:8px; overflow:hidden; border-radius:99px; background:#dfeae3; }
+      :host([data-mobile-ui="true"]) .mobile-results-empty.searching { min-height:0; align-content:start; justify-items:stretch; padding:18px; text-align:left; }
+      :host([data-mobile-ui="true"]) .mobile-search-head { min-width:0; display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:10px; }
+      :host([data-mobile-ui="true"]) .mobile-search-head svg { width:40px; height:40px; box-sizing:border-box; padding:9px; border-radius:13px; color:var(--brand-dark); background:#eaf7ef; }
+      :host([data-mobile-ui="true"]) .mobile-search-head h2 { min-width:0; margin:0; overflow:hidden; font-size:17px; line-height:1.3; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .mobile-search-head strong { border-radius:99px; padding:5px 8px; color:var(--brand-dark); background:#eaf7ef; font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .mobile-search-progress { width:100%; height:7px; margin-top:16px; overflow:hidden; border-radius:99px; background:#dfeae3; }
       :host([data-mobile-ui="true"]) .mobile-search-progress span { display:block; height:100%; border-radius:inherit; background:var(--brand); transition:width 180ms ease-out; }
+      :host([data-mobile-ui="true"]) .mobile-search-meta { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
+      :host([data-mobile-ui="true"]) .mobile-search-meta span:first-child { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .mobile-search-meta span:last-child { color:var(--brand-dark); font-weight:750; white-space:nowrap; }
       @media (max-width:370px) {
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
