@@ -573,7 +573,9 @@
         box-shadow:0 3px 10px #173d2914;
       }
       :host([data-mobile-ui="true"][data-mobile-factor-mode="manual"]) .quick-recognizer { display:none; }
-      :host([data-mobile-ui="true"][data-mobile-factor-mode="recognizer"]) .factor-manual-picker { display:none; }
+      :host([data-mobile-ui="true"][data-mobile-factor-mode="recognizer"]) .factor-manual-heading { display:flex; align-items:end; justify-content:space-between; gap:8px; margin:14px 0 8px; }
+      :host([data-mobile-ui="true"]) .factor-manual-heading b { font-size:15px; }
+      :host([data-mobile-ui="true"]) .factor-manual-heading span { color:var(--muted); font-size:10px; }
       :host([data-mobile-ui="true"]) .quick-recognizer {
         margin-bottom:8px;
         padding:12px;

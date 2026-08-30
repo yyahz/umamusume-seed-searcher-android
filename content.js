@@ -50,7 +50,7 @@
     activeColor: "blue",
     activeSubtype: "剧本",
     factorQuery: "",
-    catalogLimit: 60,
+    catalogOffset: 0,
     colorOrder: [...ranking.DEFAULT_COLOR_ORDER],
     selected: new Map(),
     factors: [],
@@ -321,7 +321,10 @@
       .gold-skill .factor-option-name { grid-area:name; overflow:visible; white-space:normal; line-height:1.35; text-overflow:clip; }
       .gold-skill .factor-option-state { grid-area:badge; align-self:start; }
       .factor-option-mapping { grid-area:mapping; min-width:0; margin-top:2px; overflow:hidden; color:#806000; font-size:10px; font-weight:650; line-height:1.35; white-space:normal; overflow-wrap:anywhere; }
-      .catalog-more { min-height:44px; width:100%; border:0; border-top:1px solid var(--line); color:var(--factor-color); background:var(--factor-soft); font-size:12px; font-weight:750; }
+      .catalog-pagination { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; border-top:1px solid var(--line); padding:6px; color:var(--muted); font-size:11px; text-align:center; }
+      .catalog-page-button { min-height:40px; border:0; border-radius:9px; color:var(--factor-color); background:var(--factor-soft); font-size:12px; font-weight:750; }
+      .catalog-page-button:disabled { color:var(--muted); background:#f1f3f1; opacity:.55; }
+      .factor-manual-heading { display:none; }
       .badge { flex:0 0 auto; border-radius:999px; padding:3px 8px; color:var(--factor-color); background:var(--factor-soft); font-size:11px; font-weight:700; }
       .selected-empty { padding:18px 10px; color:var(--muted); text-align:center; font-size:13px; }
       .tier-block { margin-top:10px; overflow:hidden; border:1px dashed color-mix(in srgb,var(--factor-color) 48%,var(--line)); border-radius:14px; background:color-mix(in srgb,var(--factor-soft) 48%,white); transition:border-color 160ms ease-out,background 160ms ease-out,box-shadow 160ms ease-out; }
@@ -587,7 +590,11 @@
 
   function renderFactorCatalog(query = state.factorQuery) {
     const matches = filteredCatalogFactors(query);
-    const visible = matches.slice(0, state.catalogLimit);
+    const pageSize = 8;
+    const maxOffset = Math.max(0, Math.floor((Math.max(1, matches.length) - 1) / pageSize) * pageSize);
+    const offset = Math.min(state.catalogOffset, maxOffset);
+    if (state.catalogOffset !== offset) state.catalogOffset = offset;
+    const visible = matches.slice(offset, offset + pageSize);
     const items = visible.length
       ? visible.map((factor) => {
         const key = ranking.factorKey(factor.type, factor.num);
@@ -603,9 +610,11 @@
         </button>`;
       }).join("")
       : '<div class="selected-empty" style="grid-column:1/-1">没有找到符合条件的因子。</div>';
-    return `<div class="catalog-head"><span>具体可选项</span><span>显示 ${visible.length} / ${matches.length}</span></div>
+    const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+    const currentPage = Math.floor(offset / pageSize) + 1;
+    return `<div class="catalog-head"><span>具体可选项</span><span>${matches.length ? `${offset + 1}–${offset + visible.length}` : 0} / ${matches.length}</span></div>
       <div class="factor-catalog" id="factor-catalog">${items}</div>
-      ${visible.length < matches.length ? `<button class="catalog-more" id="catalog-more" type="button">再显示 ${Math.min(60, matches.length - visible.length)} 项</button>` : ""}`;
+      ${matches.length > pageSize ? `<div class="catalog-pagination"><button class="catalog-page-button" type="button" data-catalog-page="previous" ${offset === 0 ? "disabled" : ""}>上一批</button><span>${currentPage} / ${pageCount}</span><button class="catalog-page-button" type="button" data-catalog-page="next" ${offset + pageSize >= matches.length ? "disabled" : ""}>下一批</button></div>` : ""}`;
   }
 
   function recognitionMessage(value) {
@@ -789,6 +798,7 @@
     return `
       ${renderQuickRecognizer()}
       <div class="factor-manual-picker">
+        <div class="factor-manual-heading"><b>继续手动选择</b><span>识别之外也可逐项补充</span></div>
         <div class="factor-tabs" role="tablist" aria-label="因子颜色">${state.colorOrder.map((colorId) => {
           const tabMeta = COLOR_META[colorId];
           return `<button type="button" role="tab" aria-selected="${state.activeColor === colorId}" class="factor-tab ${state.activeColor === colorId ? "active" : ""}" data-tab="${colorId}" style="--factor-color:${tabMeta.color};--factor-soft:${tabMeta.soft}">${tabMeta.name.replace("因子", "")}</button>`;
@@ -817,7 +827,9 @@
     const requestedKeys = new Set(
       item.matches.map((match) => ranking.factorKey(match.type, match.num))
     );
-    const requestedByColor = new Map(state.colorOrder.map((colorId) => [colorId, []]));
+    const otherColorOrder = state.colorOrder.filter((colorId) => colorId !== "blue" && colorId !== "red");
+    const displayColorOrder = ["blue", "red", ...otherColorOrder];
+    const requestedByColor = new Map(displayColorOrder.map((colorId) => [colorId, []]));
     for (const match of item.matches) {
       const matchMeta = factorVisualMeta(match);
       const matchName = match.virtualGold ? `${match.name} → ${match.lowerSkillName}` : match.name;
@@ -826,9 +838,6 @@
       requestedByColor.get(match.colorId).push(chip);
     }
 
-    const preferredBlueRed = state.colorOrder.filter((colorId) => colorId === "blue" || colorId === "red");
-    const displayColorOrder = [...preferredBlueRed, ...state.colorOrder.filter((colorId) => colorId !== "blue" && colorId !== "red")];
-    const requested = displayColorOrder.flatMap((colorId) => requestedByColor.get(colorId) || []);
     const additionalByColor = new Map(displayColorOrder.map((colorId) => [colorId, []]));
     ranking.summarizeCandidateFactors(item.candidate)
       .filter((factor) => !requestedKeys.has(ranking.factorKey(factor.type, factor.num)))
@@ -844,15 +853,22 @@
         if (!additionalByColor.has(factor.colorId)) additionalByColor.set(factor.colorId, []);
         additionalByColor.get(factor.colorId).push(chip);
       });
-    const additionalCount = [...additionalByColor.values()].reduce((sum, factors) => sum + factors.length, 0);
-    const additionalGroups = displayColorOrder.map((colorId) => {
+
+    const blueRed = ["blue", "red"].flatMap((colorId) => [
+      ...(requestedByColor.get(colorId) || []),
+      ...(additionalByColor.get(colorId) || [])
+    ]);
+    const requestedOther = otherColorOrder.flatMap((colorId) => requestedByColor.get(colorId) || []);
+    const additionalOtherCount = otherColorOrder.reduce((sum, colorId) => sum + (additionalByColor.get(colorId)?.length || 0), 0);
+    const additionalGroups = otherColorOrder.map((colorId) => {
       const factors = additionalByColor.get(colorId) || [];
       if (!factors.length) return "";
       const meta = COLOR_META[colorId];
       return `<div class="result-factor-group other-factors" style="--factor-color:${meta.color};--factor-soft:${meta.soft}"><div class="result-factor-label"><b>其他${meta.name}</b><span>${factors.length} 项</span></div><div class="factor-chip-list">${factors.join("")}</div></div>`;
     }).join("");
-    return `${requested.length ? `<div class="result-factor-group selected-factors"><div class="result-factor-label"><b>筛选因子</b><span>${requested.length} 项，优先展示</span></div><div class="factor-chip-list">${requested.join("")}</div></div>` : ""}
-      ${additionalCount ? `<div class="result-factor-label result-other-heading"><b>该种马其他因子</b><span>${additionalCount} 项，全部展示</span></div>${additionalGroups}` : ""}`;
+    return `${blueRed.length ? `<div class="result-factor-group base-factors"><div class="result-factor-label"><b>蓝红因子</b><span>${blueRed.length} 项，固定蓝在红前</span></div><div class="factor-chip-list">${blueRed.join("")}</div></div>` : ""}
+      ${requestedOther.length ? `<div class="result-factor-group selected-factors"><div class="result-factor-label"><b>筛选的其他因子</b><span>${requestedOther.length} 项</span></div><div class="factor-chip-list">${requestedOther.join("")}</div></div>` : ""}
+      ${additionalOtherCount ? `<div class="result-factor-label result-other-heading"><b>该种马其他因子</b><span>${additionalOtherCount} 项，全部展示</span></div>${additionalGroups}` : ""}`;
   }
 
   function renderResults() {
@@ -1344,24 +1360,25 @@
       state.activeColor = button.dataset.tab;
       state.activeSubtype = button.dataset.tab === "white" ? "剧本" : "all";
       state.factorQuery = "";
-      state.catalogLimit = 60;
+      state.catalogOffset = 0;
       render();
     }));
     shadow.querySelectorAll(".subtype-tab").forEach((button) => button.addEventListener("click", () => {
       state.activeSubtype = button.dataset.subtype;
-      state.catalogLimit = 60;
+      state.catalogOffset = 0;
       render();
       shadow.getElementById("factor-search")?.focus();
     }));
     const searchInput = shadow.getElementById("factor-search");
     searchInput?.addEventListener("input", () => {
-      state.catalogLimit = 60;
+      state.catalogOffset = 0;
       updateFactorCatalog(searchInput.value);
     });
     const catalogShell = shadow.getElementById("catalog-shell");
     catalogShell?.addEventListener("click", (event) => {
-      if (event.target.closest("#catalog-more")) {
-        state.catalogLimit += 60;
+      const pageButton = event.target.closest("[data-catalog-page]");
+      if (pageButton && !pageButton.disabled) {
+        state.catalogOffset = Math.max(0, state.catalogOffset + (pageButton.dataset.catalogPage === "next" ? 8 : -8));
         updateFactorCatalog(state.factorQuery);
         return;
       }
