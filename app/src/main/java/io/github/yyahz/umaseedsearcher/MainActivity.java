@@ -16,6 +16,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
 import android.webkit.WebChromeClient;
@@ -34,12 +35,15 @@ import android.widget.TextView;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
 public final class MainActivity extends Activity {
     private static final String TOOL_URL = "https://game.bilibili.com/tool/pd";
+    private static final String VERSION_SOURCE_URL = "https://raw.githubusercontent.com/yyahz/umamusume-seed-searcher-android/main/app/build.gradle";
     private static final List<String> EXTENSION_SCRIPTS = Arrays.asList(
         "page-bridge.js",
         "ranking.js",
@@ -207,6 +211,7 @@ public final class MainActivity extends Activity {
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
         cookies.setAcceptThirdPartyCookies(webView, true);
+        webView.addJavascriptInterface(new AppBridge(), "UmaSeedApp");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -220,6 +225,10 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
+                if (isExternalToolRequest(uri)) {
+                    openExternal(Uri.parse("https://game.bilibili.com/tool/pd/"));
+                    return true;
+                }
                 if (isTrustedBilibiliPage(uri)) return false;
                 openExternal(uri);
                 return true;
@@ -251,6 +260,50 @@ public final class MainActivity extends Activity {
         });
     }
 
+    private final class AppBridge {
+        @JavascriptInterface
+        public void checkForUpdates() {
+            new Thread(() -> {
+                String latest = "";
+                String error = "";
+                HttpURLConnection connection = null;
+                try {
+                    connection = (HttpURLConnection) new URL(VERSION_SOURCE_URL).openConnection();
+                    connection.setConnectTimeout(8000);
+                    connection.setReadTimeout(8000);
+                    connection.setUseCaches(false);
+                    connection.setRequestProperty("User-Agent", "UmaSeedSearcher-Android");
+                    int status = connection.getResponseCode();
+                    if (status < 200 || status >= 300) throw new IOException("HTTP " + status);
+                    String source;
+                    try (InputStream stream = connection.getInputStream()) {
+                        source = new String(readAllBytes(stream), StandardCharsets.UTF_8);
+                    }
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern
+                        .compile("versionName\\s+[\"']([^\"']+)[\"']")
+                        .matcher(source);
+                    if (!matcher.find()) throw new IOException("versionName missing");
+                    latest = matcher.group(1);
+                } catch (Exception exception) {
+                    error = "check_failed";
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+                String script = "globalThis.__umaSeedUpdateResult&&globalThis.__umaSeedUpdateResult("
+                    + quoteJs(latest) + "," + quoteJs(error) + ");";
+                handler.post(() -> webView.evaluateJavascript(script, ignored -> { }));
+            }, "uma-update-check").start();
+        }
+    }
+
+    private static byte[] readAllBytes(InputStream stream) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int count;
+        while ((count = stream.read(buffer)) != -1) output.write(buffer, 0, count);
+        return output.toByteArray();
+    }
+
     private boolean isTrustedBilibiliPage(Uri uri) {
         if (!"https".equalsIgnoreCase(uri.getScheme())) return false;
         String host = uri.getHost();
@@ -267,6 +320,10 @@ public final class MainActivity extends Activity {
             && "game.bilibili.com".equalsIgnoreCase(uri.getHost())
             && uri.getPath() != null
             && uri.getPath().startsWith("/tool/pd");
+    }
+
+    private boolean isExternalToolRequest(Uri uri) {
+        return isToolPage(uri) && "1".equals(uri.getQueryParameter("uma_seed_external"));
     }
 
     private void openExternal(Uri uri) {

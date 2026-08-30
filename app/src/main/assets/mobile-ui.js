@@ -17,6 +17,9 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
+  const APP_VERSION = "0.1.29";
+  const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
+  const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
 
   let activePage = "roles";
   let rolePage = 0;
@@ -29,6 +32,7 @@
   let colorSettleTimer = 0;
   let scrollRestoreToken = 0;
   let renderScrollSnapshot = null;
+  let updateCheck = { state: "idle", message: "尚未检查更新", latest: "", url: "" };
   const scrollPositions = new Map();
 
   function loadFactorEntryMode() {
@@ -483,6 +487,70 @@
     }
   }
 
+  function compareVersions(left, right) {
+    const normalize = (value) => String(value || "").replace(/^v/i, "").split(".").map((part) => Number(part) || 0);
+    const a = normalize(left);
+    const b = normalize(right);
+    for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+      if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) - (b[index] || 0);
+    }
+    return 0;
+  }
+
+  function renderAppSettings(section) {
+    if (!section) return;
+    section.innerHTML = `<div class="section-head"><div><h2>应用设置</h2><p class="helper">版本与更新</p></div></div><div class="mobile-update-card"><div class="mobile-update-icon">${ICONS.settings}</div><div class="mobile-update-copy"><b>种马搜索器</b><span>当前版本 v${APP_VERSION}</span></div><button type="button" data-mobile-check-update ${updateCheck.state === "checking" ? "disabled" : ""}>${updateCheck.state === "checking" ? "检查中…" : "检查更新"}</button><p class="mobile-update-status" data-update-state="${updateCheck.state}" role="status"></p>${updateCheck.url ? `<a class="mobile-update-link" href="${updateCheck.url}" rel="noopener noreferrer">查看新版</a>` : ""}</div><a class="mobile-project-link" href="${PROJECT_URL}" rel="noopener noreferrer">打开 GitHub 项目页</a>`;
+    section.querySelector(".mobile-update-status").textContent = updateCheck.message;
+  }
+
+  function ensureAppSettingsSection(ui) {
+    let section = ui.body.querySelector("[data-mobile-app-settings]");
+    if (!section) {
+      section = document.createElement("section");
+      section.className = "section mobile-app-settings";
+      section.dataset.mobileAppSettings = "";
+      section.dataset.mobileSection = "settings";
+      ui.body.appendChild(section);
+    }
+    renderAppSettings(section);
+  }
+
+  async function checkForUpdates(ui) {
+    if (updateCheck.state === "checking") return;
+    updateCheck = { state: "checking", message: "正在读取 GitHub 版本信息…", latest: "", url: "" };
+    ensureAppSettingsSection(ui);
+    if (globalThis.UmaSeedApp?.checkForUpdates) {
+      globalThis.UmaSeedApp.checkForUpdates();
+      return;
+    }
+    try {
+      const response = await fetch(VERSION_SOURCE_URL, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const source = await response.text();
+      const latest = source.match(/versionName\s+["']([^"']+)["']/)?.[1];
+      if (!latest) throw new Error("未找到版本号");
+      if (compareVersions(latest, APP_VERSION) > 0) {
+        updateCheck = { state: "available", message: `发现新版本 v${latest}`, latest, url: PROJECT_URL };
+      } else {
+        updateCheck = { state: "current", message: "当前已是最新版本", latest, url: "" };
+      }
+    } catch (_) {
+      updateCheck = { state: "error", message: "暂时无法检查，请稍后重试", latest: "", url: "" };
+    }
+    ensureAppSettingsSection(findUi());
+  }
+
+  globalThis.__umaSeedUpdateResult = (latest, error) => {
+    if (error || !latest) {
+      updateCheck = { state: "error", message: "暂时无法检查，请稍后重试", latest: "", url: "" };
+    } else if (compareVersions(latest, APP_VERSION) > 0) {
+      updateCheck = { state: "available", message: `发现新版本 v${latest}`, latest, url: PROJECT_URL };
+    } else {
+      updateCheck = { state: "current", message: "当前已是最新版本", latest, url: "" };
+    }
+    ensureAppSettingsSection(findUi());
+  };
+
   function mapSections(ui) {
     const sections = [...ui.body.children].filter((element) => element.classList.contains("section"));
     const contentSections = sections.filter((section) => !section.hasAttribute("data-mobile-empty-results"));
@@ -514,7 +582,7 @@
     updateRecognitionActionBar(ui, factorSection);
     updateRecognitionPagination(ui);
     if (settingsSection && settingsSection !== resultsSection) {
-      settingsSection.dataset.mobileSection = "settings";
+      settingsSection.dataset.mobileSection = "factors";
       settingsSection.dataset.mobileFactorOrder = "settings";
       const heading = settingsSection.querySelector(".section-head h2");
       if (heading) heading.textContent = "搜索设置";
@@ -522,6 +590,7 @@
     if (resultsSection) resultsSection.dataset.mobileSection = "results";
 
     ensureEmptyResults(ui, Boolean(resultsSection));
+    ensureAppSettingsSection(ui);
     updateRolePagination(ui);
     updateNavigation(ui);
   }
@@ -623,8 +692,7 @@
         padding:14px 12px calc(var(--mobile-nav-height) + 18px + env(safe-area-inset-bottom));
         scroll-behavior:smooth;
       }
-      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body,
-      :host([data-mobile-ui="true"][data-mobile-page="settings"]) .panel-body {
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body {
         padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-action-height) + 20px + env(safe-area-inset-bottom));
       }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { order:1; }
@@ -988,8 +1056,7 @@
         box-shadow:0 -5px 18px #1835220d;
         backdrop-filter:none;
       }
-      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar,
-      :host([data-mobile-ui="true"][data-mobile-page="settings"]) .action-bar { display:grid!important; }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar { display:grid!important; }
       :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="preview"]) .action-bar,
       :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="draft"]) .action-bar { display:none!important; }
       :host([data-mobile-ui="true"]) .mobile-recognition-bar {
@@ -1103,6 +1170,21 @@
       :host([data-mobile-ui="true"]) .mobile-search-meta { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
       :host([data-mobile-ui="true"]) .mobile-search-meta span:first-child { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
       :host([data-mobile-ui="true"]) .mobile-search-meta span:last-child { color:var(--brand-dark); font-weight:750; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .mobile-app-settings { padding:16px; }
+      :host([data-mobile-ui="true"]) .mobile-app-settings .section-head { margin-bottom:10px; }
+      :host([data-mobile-ui="true"]) .mobile-update-card { display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid var(--line); border-radius:16px; padding:12px; background:#fbfcfb; }
+      :host([data-mobile-ui="true"]) .mobile-update-icon { width:44px; height:44px; display:grid; place-items:center; border-radius:13px; color:var(--brand-dark); background:#eaf7ef; }
+      :host([data-mobile-ui="true"]) .mobile-update-icon svg { width:23px; height:23px; }
+      :host([data-mobile-ui="true"]) .mobile-update-copy { min-width:0; display:grid; gap:2px; }
+      :host([data-mobile-ui="true"]) .mobile-update-copy b { font-size:14px; }
+      :host([data-mobile-ui="true"]) .mobile-update-copy span { color:var(--muted); font-size:11px; }
+      :host([data-mobile-ui="true"]) [data-mobile-check-update] { min-height:44px; border:0; border-radius:11px; padding:0 11px; color:var(--brand-dark); background:#eaf7ef; font-size:11px; font-weight:800; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) [data-mobile-check-update]:disabled { opacity:.55; }
+      :host([data-mobile-ui="true"]) .mobile-update-status { grid-column:2 / -1; margin:0; color:var(--muted); font-size:11px; }
+      :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="available"] { color:var(--brand-dark); font-weight:750; }
+      :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="error"] { color:var(--danger); }
+      :host([data-mobile-ui="true"]) .mobile-update-link { grid-column:2 / -1; width:max-content; color:var(--brand-dark); font-size:12px; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-project-link { min-height:48px; display:flex; align-items:center; justify-content:center; margin-top:10px; border:1px solid var(--line); border-radius:13px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; text-decoration:none; }
       @media (max-width:370px) {
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
@@ -1184,6 +1266,10 @@
     }, true);
     ui.root.addEventListener("click", (event) => {
       if (event.target.closest("#recognize-factor-text")) recognitionPage = 0;
+      if (event.target.closest("[data-mobile-check-update]")) {
+        checkForUpdates(ui);
+        return;
+      }
       if (event.target.closest(".mobile-factor-editor-scrim")) {
         const editor = ui.panel.querySelector(".mobile-factor-editor");
         if (editor?.dataset.mobileEditorDirty === "true") saveFactorEditor(ui);

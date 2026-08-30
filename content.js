@@ -415,7 +415,7 @@
     <div class="scrim" id="scrim"></div>
     <div class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="optimizer-title" aria-hidden="true" inert>
       <header class="panel-header">
-        <div class="title-wrap"><div class="brand-mark"><img src="${extensionIconUrl}" alt="" aria-hidden="true"></div><div><h1 id="optimizer-title">种马搜索器<span class="brand-credit">by Songe</span></h1><div class="subtitle"><a class="source-link" href="https://wiki.biligame.com/umamusume/" target="_blank" rel="noopener noreferrer" aria-label="打开赛马娘 BWIKI 数据来源（新窗口）">数据来源：BWIKI</a><a class="source-link" href="https://game.bilibili.com/tool/pd/" target="_blank" rel="noopener noreferrer" aria-label="打开吗哩吗哩工具箱（新窗口）">搜索依托：吗哩吗哩工具箱</a></div></div></div>
+        <div class="title-wrap"><div class="brand-mark"><img src="${extensionIconUrl}" alt="" aria-hidden="true"></div><div><h1 id="optimizer-title">种马搜索器<span class="brand-credit">by Songe</span></h1><div class="subtitle"><a class="source-link" href="https://wiki.biligame.com/umamusume/" target="_blank" rel="noopener noreferrer" aria-label="打开赛马娘 BWIKI 数据来源（新窗口）">数据来源：BWIKI</a><a class="source-link" href="https://game.bilibili.com/tool/pd/?uma_seed_external=1" rel="noopener noreferrer" aria-label="使用系统浏览器打开吗哩吗哩工具箱">搜索依托：吗哩吗哩工具箱</a></div></div></div>
         <button class="icon-button" id="close" type="button" aria-label="关闭种马搜索器">${ICONS.close}</button>
       </header>
       <div class="panel-body" id="body"></div>
