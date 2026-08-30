@@ -86,14 +86,15 @@ $unsignedApk = Join-Path $buildRoot 'app-unsigned.apk'
     --java $generatedRoot `
     --min-sdk-version 24 `
     --target-sdk-version 35 `
-    --version-code 33 `
-    --version-name '0.1.32' `
+    --version-code 34 `
+    --version-name '0.1.33' `
     -A (Join-Path $buildRoot 'assets') `
     $compiledZip
 if ($LASTEXITCODE -ne 0) { throw 'APK 资源链接失败。' }
 
 $javaSources = @(
     (Join-Path $appRoot 'src\main\java\io\github\yyahz\umaseedsearcher\MainActivity.java'),
+    (Join-Path $appRoot 'src\main\java\io\github\yyahz\umaseedsearcher\UpdateFileProvider.java'),
     (Join-Path $generatedRoot 'io\github\yyahz\umaseedsearcher\R.java')
 )
 & javac --release 17 -encoding UTF-8 -classpath $androidJar -d $classesRoot @javaSources
@@ -133,7 +134,7 @@ if (-not (Test-Path -LiteralPath $debugKeystore -PathType Leaf)) {
     if ($LASTEXITCODE -ne 0) { throw '调试签名生成失败。' }
 }
 
-$finalApk = Join-Path $outputRoot 'uma-seed-searcher-android-v0.1.32-debug.apk'
+$finalApk = Join-Path $outputRoot 'uma-seed-searcher-android-v0.1.33-debug.apk'
 & $apksigner sign `
     --ks $debugKeystore `
     --ks-pass 'pass:android' `

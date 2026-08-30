@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Insets;
@@ -12,6 +15,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
@@ -40,6 +44,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -47,10 +53,13 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public final class MainActivity extends Activity {
     private static final String TOOL_URL = "https://game.bilibili.com/tool/pd";
     private static final String VERSION_SOURCE_URL = "https://raw.githubusercontent.com/yyahz/umamusume-seed-searcher-android/main/app/build.gradle";
+    private static final String UPDATE_AUTHORITY = "io.github.yyahz.umaseedsearcher.updates";
+    private static final long MAX_UPDATE_BYTES = 25L * 1024L * 1024L;
     private static final List<String> EXTENSION_SCRIPTS = Arrays.asList(
         "page-bridge.js",
         "ranking.js",
@@ -69,6 +78,9 @@ public final class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int readinessAttempts;
     private boolean searchInterfaceReady;
+    private volatile boolean updateDownloadInProgress;
+    private File pendingUpdateFile;
+    private boolean awaitingInstallPermission;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -376,6 +388,179 @@ public final class MainActivity extends Activity {
                 handler.post(() -> webView.evaluateJavascript(script, ignored -> { }));
             }, "uma-update-check").start();
         }
+
+        @JavascriptInterface
+        public void installUpdate(String version) {
+            downloadAndInstallUpdate(version);
+        }
+    }
+
+    private void downloadAndInstallUpdate(String version) {
+        String normalizedVersion = String.valueOf(version).replaceFirst("^[vV]", "");
+        if (!normalizedVersion.matches("\\d+\\.\\d+\\.\\d+") || updateDownloadInProgress) return;
+        updateDownloadInProgress = true;
+        notifyUpdateStatus("downloading", "正在下载新版… 0%");
+        new Thread(() -> {
+            File temporary = new File(getCacheDir(), UpdateFileProvider.FILE_NAME + ".download");
+            File updateFile = new File(getCacheDir(), UpdateFileProvider.FILE_NAME);
+            HttpURLConnection connection = null;
+            try {
+                String fileName = "uma-seed-searcher-android-v" + normalizedVersion + "-debug.apk";
+                URL releaseUrl = new URL(
+                    "https://github.com/yyahz/umamusume-seed-searcher-android/releases/download/v"
+                        + normalizedVersion + "/" + fileName
+                );
+                connection = openReleaseConnection(releaseUrl);
+                long expected = connection.getContentLengthLong();
+                if (expected > MAX_UPDATE_BYTES) throw new IOException("Update package is too large");
+                long downloaded = 0;
+                int lastProgress = -1;
+                try (InputStream input = connection.getInputStream(); FileOutputStream output = new FileOutputStream(temporary)) {
+                    byte[] buffer = new byte[16 * 1024];
+                    int count;
+                    while ((count = input.read(buffer)) != -1) {
+                        downloaded += count;
+                        if (downloaded > MAX_UPDATE_BYTES) throw new IOException("Update package is too large");
+                        output.write(buffer, 0, count);
+                        if (expected > 0) {
+                            int progress = (int) Math.min(99, downloaded * 100 / expected);
+                            if (progress >= lastProgress + 5) {
+                                lastProgress = progress;
+                                notifyUpdateStatus("downloading", "正在下载新版… " + progress + "%");
+                            }
+                        }
+                    }
+                }
+                if (downloaded <= 0) throw new IOException("Empty update package");
+                if (updateFile.exists() && !updateFile.delete()) throw new IOException("Cannot replace update package");
+                if (!temporary.renameTo(updateFile)) throw new IOException("Cannot finalize update package");
+                verifyUpdatePackage(updateFile, normalizedVersion);
+                pendingUpdateFile = updateFile;
+                notifyUpdateStatus("ready", "下载完成，正在打开系统安装器…");
+                handler.post(this::requestUpdateInstall);
+            } catch (Exception error) {
+                temporary.delete();
+                updateFile.delete();
+                notifyUpdateStatus("error", "更新失败，请稍后重试");
+            } finally {
+                updateDownloadInProgress = false;
+                if (connection != null) connection.disconnect();
+            }
+        }, "uma-update-download").start();
+    }
+
+    private HttpURLConnection openReleaseConnection(URL initialUrl) throws IOException {
+        URL current = initialUrl;
+        for (int redirects = 0; redirects <= 5; redirects += 1) {
+            if (!isTrustedReleaseUrl(current)) throw new IOException("Untrusted update URL");
+            HttpURLConnection connection = (HttpURLConnection) current.openConnection();
+            connection.setConnectTimeout(10_000);
+            connection.setReadTimeout(20_000);
+            connection.setUseCaches(false);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestProperty("User-Agent", "UmaSeedSearcher-Android");
+            int status = connection.getResponseCode();
+            if (status >= 200 && status < 300) return connection;
+            if (status < 300 || status >= 400) {
+                connection.disconnect();
+                throw new IOException("HTTP " + status);
+            }
+            String location = connection.getHeaderField("Location");
+            connection.disconnect();
+            if (location == null || location.isEmpty()) throw new IOException("Missing redirect location");
+            current = new URL(current, location);
+        }
+        throw new IOException("Too many redirects");
+    }
+
+    private boolean isTrustedReleaseUrl(URL url) {
+        if (!"https".equalsIgnoreCase(url.getProtocol())) return false;
+        String host = url.getHost().toLowerCase(Locale.ROOT);
+        return host.equals("github.com")
+            || host.equals("objects.githubusercontent.com")
+            || host.equals("release-assets.githubusercontent.com");
+    }
+
+    @SuppressWarnings("deprecation")
+    private void verifyUpdatePackage(File file, String expectedVersion) throws Exception {
+        PackageManager packageManager = getPackageManager();
+        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            ? PackageManager.GET_SIGNING_CERTIFICATES
+            : PackageManager.GET_SIGNATURES;
+        PackageInfo archive = packageManager.getPackageArchiveInfo(file.getAbsolutePath(), flags);
+        PackageInfo installed = packageManager.getPackageInfo(getPackageName(), flags);
+        if (archive == null || !getPackageName().equals(archive.packageName)) {
+            throw new IOException("Unexpected package name");
+        }
+        if (!expectedVersion.equals(archive.versionName) || versionCodeOf(archive) <= versionCodeOf(installed)) {
+            throw new IOException("Unexpected update version");
+        }
+        if (!sameSignatures(signaturesOf(installed), signaturesOf(archive))) {
+            throw new IOException("Update signature mismatch");
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private Signature[] signaturesOf(PackageInfo info) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null) {
+            return info.signingInfo.getApkContentsSigners();
+        }
+        return info.signatures == null ? new Signature[0] : info.signatures;
+    }
+
+    @SuppressWarnings("deprecation")
+    private long versionCodeOf(PackageInfo info) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? info.getLongVersionCode() : info.versionCode;
+    }
+
+    private boolean sameSignatures(Signature[] left, Signature[] right) {
+        if (left.length == 0 || left.length != right.length) return false;
+        String[] a = Arrays.stream(left).map(Signature::toCharsString).sorted().toArray(String[]::new);
+        String[] b = Arrays.stream(right).map(Signature::toCharsString).sorted().toArray(String[]::new);
+        return Arrays.equals(a, b);
+    }
+
+    private void requestUpdateInstall() {
+        File file = pendingUpdateFile;
+        if (file == null || !file.isFile()) {
+            notifyUpdateStatus("error", "安装包不可用，请重新下载");
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !getPackageManager().canRequestPackageInstalls()) {
+            awaitingInstallPermission = true;
+            notifyUpdateStatus("permission", "请允许安装未知应用，然后返回本应用");
+            try {
+                startActivity(new Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName())
+                ));
+            } catch (ActivityNotFoundException error) {
+                awaitingInstallPermission = false;
+                notifyUpdateStatus("error", "无法打开安装授权页面");
+            }
+            return;
+        }
+        launchUpdateInstaller(file);
+    }
+
+    private void launchUpdateInstaller(File file) {
+        pendingUpdateFile = null;
+        Uri uri = Uri.parse("content://" + UPDATE_AUTHORITY + UpdateFileProvider.CONTENT_PATH);
+        Intent intent = new Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(intent);
+            notifyUpdateStatus("installer", "请在系统安装器中确认更新");
+        } catch (ActivityNotFoundException error) {
+            notifyUpdateStatus("error", "未找到可用的系统安装器");
+        }
+    }
+
+    private void notifyUpdateStatus(String state, String message) {
+        String script = "globalThis.__umaSeedInstallStatus&&globalThis.__umaSeedInstallStatus("
+            + quoteJs(state) + "," + quoteJs(message) + ");";
+        handler.post(() -> webView.evaluateJavascript(script, ignored -> { }));
     }
 
     private static byte[] readAllBytes(InputStream stream) throws IOException {
@@ -569,6 +754,18 @@ public final class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle outState) {
         webView.saveState(outState);
         super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!awaitingInstallPermission) return;
+        awaitingInstallPermission = false;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls()) {
+            requestUpdateInstall();
+        } else {
+            notifyUpdateStatus("error", "未获得安装权限，更新已取消");
+        }
     }
 
     @Override

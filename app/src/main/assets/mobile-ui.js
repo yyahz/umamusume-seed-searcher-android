@@ -17,7 +17,7 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.32";
+  const APP_VERSION = "0.1.33";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
@@ -499,9 +499,18 @@
     return 0;
   }
 
+  function releaseApkUrl(version) {
+    const normalized = String(version || "").replace(/^v/i, "");
+    return `${PROJECT_URL}/releases/download/v${normalized}/uma-seed-searcher-android-v${normalized}-debug.apk`;
+  }
+
   function renderAppSettings(section) {
     if (!section) return;
-    section.innerHTML = `<div class="section-head"><div><h2>应用设置</h2><p class="helper">版本与更新</p></div></div><div class="mobile-update-card"><div class="mobile-update-icon">${ICONS.settings}</div><div class="mobile-update-copy"><b>种马搜索器</b><span>当前版本 v${APP_VERSION}</span></div><button type="button" data-mobile-check-update ${updateCheck.state === "checking" ? "disabled" : ""}>${updateCheck.state === "checking" ? "检查中…" : "检查更新"}</button><p class="mobile-update-status" data-update-state="${updateCheck.state}" role="status"></p>${updateCheck.url ? `<a class="mobile-update-link" href="${updateCheck.url}" rel="noopener noreferrer">查看新版</a>` : ""}</div><a class="mobile-project-link" href="${PROJECT_URL}" rel="noopener noreferrer">打开 GitHub 项目页</a>`;
+    const busy = ["checking", "downloading", "ready", "permission", "installer"].includes(updateCheck.state);
+    const installAction = updateCheck.url
+      ? `<button class="mobile-update-install" type="button" data-mobile-install-update ${busy ? "disabled" : ""}>${updateCheck.state === "downloading" ? "下载中…" : "更新新版"}</button>`
+      : "";
+    section.innerHTML = `<div class="section-head"><div><h2>应用设置</h2><p class="helper">版本与更新</p></div></div><div class="mobile-update-card"><div class="mobile-update-icon">${ICONS.settings}</div><div class="mobile-update-copy"><b>种马搜索器</b><span>当前版本 v${APP_VERSION}</span></div><button type="button" data-mobile-check-update ${busy ? "disabled" : ""}>${updateCheck.state === "checking" ? "检查中…" : "检查更新"}</button><p class="mobile-update-status" data-update-state="${updateCheck.state}" role="status"></p>${installAction}</div><a class="mobile-project-link" href="${PROJECT_URL}" rel="noopener noreferrer">打开 GitHub 项目页</a>`;
     section.querySelector(".mobile-update-status").textContent = updateCheck.message;
   }
 
@@ -544,7 +553,7 @@
       const latest = source.match(/versionName\s+["']([^"']+)["']/)?.[1];
       if (!latest) throw new Error("未找到版本号");
       if (compareVersions(latest, APP_VERSION) > 0) {
-        updateCheck = { state: "available", message: `发现新版本 v${latest}`, latest, url: PROJECT_URL };
+        updateCheck = { state: "available", message: `发现新版本 v${latest}`, latest, url: releaseApkUrl(latest) };
       } else {
         updateCheck = { state: "current", message: "当前已是最新版本", latest, url: "" };
       }
@@ -558,10 +567,19 @@
     if (error || !latest) {
       updateCheck = { state: "error", message: "暂时无法检查，请稍后重试", latest: "", url: "" };
     } else if (compareVersions(latest, APP_VERSION) > 0) {
-      updateCheck = { state: "available", message: `发现新版本 v${latest}`, latest, url: PROJECT_URL };
+      updateCheck = { state: "available", message: `发现新版本 v${latest}`, latest, url: releaseApkUrl(latest) };
     } else {
       updateCheck = { state: "current", message: "当前已是最新版本", latest, url: "" };
     }
+    ensureAppSettingsSection(findUi());
+  };
+
+  globalThis.__umaSeedInstallStatus = (state, message) => {
+    updateCheck = {
+      ...updateCheck,
+      state: String(state || "error"),
+      message: String(message || "更新失败，请稍后重试")
+    };
     ensureAppSettingsSection(findUi());
   };
 
@@ -1200,7 +1218,8 @@
       :host([data-mobile-ui="true"]) .mobile-update-status { grid-column:2 / -1; margin:0; color:var(--muted); font-size:11px; }
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="available"] { color:var(--brand-dark); font-weight:750; }
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="error"] { color:var(--danger); }
-      :host([data-mobile-ui="true"]) .mobile-update-link { grid-column:2 / -1; width:max-content; color:var(--brand-dark); font-size:12px; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-update-install { grid-column:2 / -1; min-height:48px; border:0; border-radius:12px; color:#fff; background:var(--brand); font-size:13px; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-update-install:disabled { opacity:.58; }
       :host([data-mobile-ui="true"]) .mobile-project-link { min-height:48px; display:flex; align-items:center; justify-content:center; margin-top:10px; border:1px solid var(--line); border-radius:13px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; text-decoration:none; }
       :host([data-mobile-ui="true"]) .mobile-data-statement { padding:16px; }
       :host([data-mobile-ui="true"]) .mobile-data-statement .section-head { margin-bottom:10px; }
@@ -1294,6 +1313,11 @@
       if (event.target.closest("#recognize-factor-text")) recognitionPage = 0;
       if (event.target.closest("[data-mobile-check-update]")) {
         checkForUpdates(ui);
+        return;
+      }
+      if (event.target.closest("[data-mobile-install-update]")) {
+        if (globalThis.UmaSeedApp?.installUpdate) globalThis.UmaSeedApp.installUpdate(updateCheck.latest);
+        else if (updateCheck.url) location.href = updateCheck.url;
         return;
       }
       if (event.target.closest(".mobile-factor-editor-scrim")) {
