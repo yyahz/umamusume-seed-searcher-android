@@ -6,13 +6,15 @@
   const ICONS = {
     roles: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/></svg>',
     factors: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="2"/><rect x="14" y="4" width="6" height="6" rx="2"/><rect x="4" y="14" width="6" height="6" rx="2"/><rect x="14" y="14" width="6" height="6" rx="2"/></svg>',
-    results: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><path d="m3.5 6 .8.8L6 5M3.5 12l.8.8L6 11M3.5 18l.8.8L6 17"/></svg>'
+    results: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><path d="m3.5 6 .8.8L6 5M3.5 12l.8.8L6 11M3.5 18l.8.8L6 17"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h5M15 6h5M4 12h9M17 12h3M4 18h3M11 18h9"/><circle cx="12" cy="6" r="2.5"/><circle cx="15" cy="12" r="2.5"/><circle cx="9" cy="18" r="2.5"/></svg>'
   };
-  const PAGE_ORDER = ["roles", "factors", "results"];
+  const PAGE_ORDER = ["roles", "factors", "results", "settings"];
   const PAGE_LABELS = {
     roles: "角色",
     factors: "因子",
-    results: "结果"
+    results: "结果",
+    settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
 
@@ -512,7 +514,7 @@
     updateRecognitionActionBar(ui, factorSection);
     updateRecognitionPagination(ui);
     if (settingsSection && settingsSection !== resultsSection) {
-      settingsSection.dataset.mobileSection = "factors";
+      settingsSection.dataset.mobileSection = "settings";
       settingsSection.dataset.mobileFactorOrder = "settings";
       const heading = settingsSection.querySelector(".section-head h2");
       if (heading) heading.textContent = "搜索设置";
@@ -608,7 +610,8 @@
       :host([data-mobile-ui="true"]) h1 { font-size:18px; }
       :host([data-mobile-ui="true"]) .brand-credit { color:var(--muted); font-size:9px; opacity:.78; }
       :host([data-mobile-ui="true"]) .subtitle { margin-top:1px; color:var(--muted); font-size:11px; }
-      :host([data-mobile-ui="true"]) .source-link { color:var(--brand-dark); }
+      :host([data-mobile-ui="true"]) .subtitle { display:grid; gap:0; }
+      :host([data-mobile-ui="true"]) .source-link { min-height:18px; color:var(--brand-dark); line-height:1.35; }
       :host([data-mobile-ui="true"]) #close { display:none!important; }
       :host([data-mobile-ui="true"]) .panel-body {
         display:flex;
@@ -620,7 +623,8 @@
         padding:14px 12px calc(var(--mobile-nav-height) + 18px + env(safe-area-inset-bottom));
         scroll-behavior:smooth;
       }
-      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body {
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body,
+      :host([data-mobile-ui="true"][data-mobile-page="settings"]) .panel-body {
         padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-action-height) + 20px + env(safe-area-inset-bottom));
       }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { order:1; }
@@ -628,7 +632,8 @@
       :host([data-mobile-ui="true"]) #body > .section { display:none; }
       :host([data-mobile-ui="true"][data-mobile-page="roles"]) #body > .section[data-mobile-section~="roles"],
       :host([data-mobile-ui="true"][data-mobile-page="factors"]) #body > .section[data-mobile-section~="factors"],
-      :host([data-mobile-ui="true"][data-mobile-page="results"]) #body > .section[data-mobile-section~="results"] { display:block; }
+      :host([data-mobile-ui="true"][data-mobile-page="results"]) #body > .section[data-mobile-section~="results"],
+      :host([data-mobile-ui="true"][data-mobile-page="settings"]) #body > .section[data-mobile-section~="settings"] { display:block; }
       :host([data-mobile-ui="true"]) .section {
         margin-bottom:12px;
         padding:16px;
@@ -983,7 +988,8 @@
         box-shadow:0 -5px 18px #1835220d;
         backdrop-filter:none;
       }
-      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar { display:grid!important; }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar,
+      :host([data-mobile-ui="true"][data-mobile-page="settings"]) .action-bar { display:grid!important; }
       :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="preview"]) .action-bar,
       :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="draft"]) .action-bar { display:none!important; }
       :host([data-mobile-ui="true"]) .mobile-recognition-bar {
@@ -1025,7 +1031,7 @@
         bottom:0;
         min-height:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
         display:grid;
-        grid-template-columns:repeat(3,1fr);
+        grid-template-columns:repeat(4,1fr);
         align-items:start;
         gap:4px;
         padding:7px 8px calc(6px + env(safe-area-inset-bottom));
