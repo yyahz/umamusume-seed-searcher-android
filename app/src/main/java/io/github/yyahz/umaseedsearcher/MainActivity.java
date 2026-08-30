@@ -208,6 +208,18 @@ public final class MainActivity extends Activity {
 
     private void configureSystemBars() {
         Window window = getWindow();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.setDecorFitsSystemWindows(true);
+            window.setStatusBarColor(Color.rgb(247, 248, 244));
+            window.setNavigationBarColor(Color.rgb(247, 248, 244));
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                int appearance = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                controller.setSystemBarsAppearance(appearance, appearance);
+            }
+            return;
+        }
         window.setStatusBarColor(Color.TRANSPARENT);
         window.setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -231,6 +243,10 @@ public final class MainActivity extends Activity {
     }
 
     private void applySystemBarInsets(View root) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            root.setPadding(0, 0, 0, 0);
+            return;
+        }
         root.setOnApplyWindowInsetsListener((view, windowInsets) -> {
             int left;
             int top;
