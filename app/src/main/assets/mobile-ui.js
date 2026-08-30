@@ -17,7 +17,7 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.37";
+  const APP_VERSION = "0.1.38";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
