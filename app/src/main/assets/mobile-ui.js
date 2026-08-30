@@ -248,6 +248,28 @@
     });
   }
 
+  function updateRecognitionActionBar(ui, factorSection) {
+    let bar = ui.panel.querySelector(".mobile-recognition-bar");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "mobile-recognition-bar";
+      ui.panel.appendChild(bar);
+    }
+    const preview = factorSection?.querySelector("#recognition-feedback");
+    const draft = factorSection?.querySelector("#recognition-draft");
+    const mode = preview ? "preview" : draft ? "draft" : "none";
+    ui.host.dataset.mobileRecognitionState = mode;
+    if (mode === "preview") {
+      const apply = factorSection.querySelector("#stage-factor-recognition");
+      bar.innerHTML = `<button type="button" class="secondary" data-recognition-forward="cancel-factor-recognition">返回修改</button><button type="button" class="primary" data-recognition-forward="stage-factor-recognition" ${apply?.disabled ? "disabled" : ""}>${apply?.textContent || "加入待导入"}</button>`;
+    } else if (mode === "draft") {
+      const apply = factorSection.querySelector("#apply-pending-recognition");
+      bar.innerHTML = `<button type="button" class="secondary" data-recognition-continue>继续添加</button><button type="button" class="primary" data-recognition-forward="apply-pending-recognition">${apply?.textContent || "应用全部"}</button>`;
+    } else {
+      bar.replaceChildren();
+    }
+  }
+
   function updateNavigation(ui) {
     const roleSection = ui.body.querySelector(':scope > .section[data-mobile-section="roles"]');
     const factorSection = ui.body.querySelector(':scope > .section[data-mobile-section~="factors"]');
@@ -316,6 +338,7 @@
       const activeFactorTab = factorSection.querySelector(".factor-tab.active[data-tab]");
       if (activeFactorTab) ui.host.dataset.mobileFactorColor = activeFactorTab.dataset.tab;
     }
+    updateRecognitionActionBar(ui, factorSection);
     if (settingsSection && settingsSection !== resultsSection) {
       settingsSection.dataset.mobileSection = "factors";
       settingsSection.dataset.mobileFactorOrder = "settings";
@@ -558,6 +581,25 @@
         border-radius:16px;
         background:#f1f8f4;
       }
+      :host([data-mobile-ui="true"]) .recognizer-kicker { display:none; }
+      :host([data-mobile-ui="true"]) .recognizer-textarea { min-height:116px; }
+      :host([data-mobile-ui="true"]) .recognizer-actions { gap:8px; }
+      :host([data-mobile-ui="true"]) .recognizer-hint { font-size:10px; line-height:1.45; }
+      :host([data-mobile-ui="true"]) .recognition-feedback { gap:7px; }
+      :host([data-mobile-ui="true"]) .recognition-summary { padding:7px 9px; font-size:11px; }
+      :host([data-mobile-ui="true"]) .recognition-tier-note { padding:7px 9px; font-size:10px; line-height:1.45; }
+      :host([data-mobile-ui="true"]) .recognition-list { gap:4px; }
+      :host([data-mobile-ui="true"]) .recognition-item {
+        min-height:54px;
+        grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);
+        align-items:center;
+        gap:6px;
+        padding:6px 8px;
+      }
+      :host([data-mobile-ui="true"]) .recognition-name { font-size:11px; }
+      :host([data-mobile-ui="true"]) .recognition-kind { font-size:9px; line-height:1.35; }
+      :host([data-mobile-ui="true"]) .recognition-stars { font-size:9px; line-height:1.4; text-align:right; white-space:normal; }
+      :host([data-mobile-ui="true"]) .recognition-issue { padding:7px 9px; font-size:10px; }
       :host([data-mobile-ui="true"]) .recognizer-label { font-size:15px; }
       :host([data-mobile-ui="true"]) .recognizer-helper,
       :host([data-mobile-ui="true"]) .recognizer-hint { font-size:12px; }
@@ -674,6 +716,29 @@
       }
       :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar,
       :host([data-mobile-ui="true"][data-mobile-page="results"]) .action-bar { display:grid!important; }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="preview"]) .action-bar,
+      :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="draft"]) .action-bar { display:none!important; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-bar {
+        position:absolute;
+        z-index:5;
+        left:0;
+        right:0;
+        bottom:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+        display:none;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        padding:7px 12px;
+        border-top:1px solid var(--line);
+        background:#fffffff7;
+        box-shadow:0 -5px 18px #1835220d;
+      }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="preview"]) .mobile-recognition-bar,
+      :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="draft"]) .mobile-recognition-bar { display:grid; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-bar button { min-height:52px; border-radius:14px; font-size:13px; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-bar .secondary { border:1px solid var(--line); color:var(--muted); background:#fff; }
+      :host([data-mobile-ui="true"]) .recognition-feedback > .recognition-preview-actions { display:none; }
+      :host([data-mobile-ui="true"]) .recognition-draft > .recognition-preview-actions .recognition-apply { display:none; }
+      :host([data-mobile-ui="true"]) .recognition-draft > .recognition-preview-actions .recognition-cancel { width:100%; }
       :host([data-mobile-ui="true"]) .status { display:none; min-height:18px; overflow:hidden; font-size:11px; white-space:nowrap; text-overflow:ellipsis; }
       :host([data-mobile-ui="true"]) .status.error,
       :host([data-mobile-ui="true"]) .status.success { display:block; margin-bottom:4px; }
@@ -833,6 +898,17 @@
       scrollPositions.set(activePage, ui.body.scrollTop);
     }, true);
     ui.root.addEventListener("click", (event) => {
+      const recognitionForward = event.target.closest("[data-recognition-forward]");
+      if (recognitionForward) {
+        ui.root.getElementById(recognitionForward.dataset.recognitionForward)?.click();
+        return;
+      }
+      if (event.target.closest("[data-recognition-continue]")) {
+        const input = ui.root.getElementById("bulk-factor-input");
+        input?.scrollIntoView({ block: "center" });
+        input?.focus();
+        return;
+      }
       const factorModeButton = event.target.closest("[data-factor-entry-mode]");
       if (factorModeButton) {
         setFactorEntryMode(ui, factorModeButton.dataset.factorEntryMode);

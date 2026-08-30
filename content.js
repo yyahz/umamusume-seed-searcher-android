@@ -602,6 +602,21 @@
     return String(value?.message || value?.text || value?.code || "识别时出现未知问题");
   }
 
+  function recognitionIssueText(value) {
+    if (value && typeof value === "object" && value.text) return String(value.text);
+    const message = recognitionMessage(value);
+    const quoted = message.match(/[“\"]([^”\"]+)[”\"]/);
+    return quoted?.[1] || message;
+  }
+
+  function renderRecognitionIssueSummary(title, values) {
+    const unique = [...new Set(values.map(recognitionIssueText).map((value) => value.trim()).filter(Boolean))];
+    if (!unique.length) return "";
+    const visible = unique.slice(0, 12);
+    const rest = unique.length - visible.length;
+    return `<div class="recognition-issue"><b>${escapeHtml(title)} · ${unique.length} 项</b>${escapeHtml(visible.join("、"))}${rest ? `，另有 ${rest} 项` : ""}。</div>`;
+  }
+
   function recognitionMatchLabel(kind) {
     if (kind === "alias") return "安全简称匹配";
     if (kind === "traditional") return "繁中名称映射";
@@ -678,7 +693,7 @@
     const tierNote = current ? " 保留当前" : " 本轮预排";
     return `<div class="recognition-item" style="--factor-color:${meta.color};--factor-soft:${meta.soft}" title="${escapeHtml(item.sourceText || factor.name)}">
       <div><div class="recognition-name">${escapeHtml(factor.name)}</div><div class="recognition-kind">${escapeHtml(selectedFactorSubtitle(factor))} · ${recognitionMatchLabel(item.matchKind)}</div></div>
-      <div class="recognition-stars">家系 ${totalStars}★${totalNote}<br>本体 ${selfStars}★${selfNote}<br>优先级 ${["高", "中", "低"][plannedTier - 1]}${tierNote}</div>
+      <div class="recognition-stars">家系 ${totalStars}★${totalNote} · 本体 ${selfStars}★${selfNote} · ${["高", "中", "低"][plannedTier - 1]}${tierNote}</div>
     </div>`;
   }
 
@@ -708,16 +723,15 @@
       const candidates = (item.candidates || []).map((candidate) => candidate?.factor?.name || candidate?.name).filter(Boolean);
       return `<div class="recognition-issue"><b>“${escapeHtml(item.sourceText || item.text || "未命名片段")}”存在歧义</b>${candidates.length ? `可能是：${escapeHtml(candidates.join("、"))}。` : "请补全正式因子名。"}</div>`;
     }).join("");
-    const unknownBlocks = unknown.map((item) => {
-      const text = typeof item === "string" ? item : item?.sourceText || item?.text || item?.normalized;
-      return text ? `<div class="recognition-issue"><b>未识别片段</b>${escapeHtml(text)}；请检查名称或补充分隔符。</div>` : "";
-    }).join("");
-    const warningBlocks = warnings.map((item) => `<div class="recognition-issue"><b>识别提示</b>${escapeHtml(recognitionMessage(item))}</div>`).join("");
+    const unknownBlocks = renderRecognitionIssueSummary("未识别片段", unknown.map((item) => (
+      typeof item === "string" ? item : item?.sourceText || item?.text || item?.normalized || recognitionMessage(item)
+    )));
+    const warningBlocks = renderRecognitionIssueSummary("已忽略无效片段", warnings);
     const errorBlocks = errors.map((item) => `<div class="recognition-issue error" role="alert"><b>无法应用</b>${escapeHtml(recognitionMessage(item))}</div>`).join("");
     const canApply = Boolean(result.canApply && resolved.length && !errors.length);
     return `<div class="recognition-feedback" id="recognition-feedback" aria-live="polite">
-      <div class="recognition-summary"><span>识别 ${resolved.length} 项</span><span>歧义 ${ambiguous.length} · 未识别 ${unknown.length}</span></div>
-      <div class="recognition-tier-note"><b>加入后的累计预排：</b>${skillCount >= 20 ? "前 10 项高，第 11–20 项中，第 21 项以后低" : `共 ${skillCount} 个新增技能，尚不足 20 个，本轮均为高`}；已有因子的手动优先级保持不变。</div>
+      <div class="recognition-summary"><span>识别 ${resolved.length} 项</span><span>歧义 ${ambiguous.length} · 未识别 ${unknown.length} · 忽略 ${warnings.length}</span></div>
+      <div class="recognition-tier-note"><b>自动排序：</b>${skillCount >= 20 ? "前 10 项高 · 第 11–20 项中 · 其余低" : `新增技能 ${skillCount} 项 · 本轮均为高`}；已有手动优先级不变。</div>
       ${items ? `<div class="recognition-list">${items}</div>` : '<div class="recognition-issue error" role="alert"><b>没有识别到可用因子</b>请补充更完整的因子名称后重试。</div>'}
       ${ambiguityBlocks}${unknownBlocks}${warningBlocks}${errorBlocks}
       <div class="recognition-preview-actions">
@@ -747,9 +761,9 @@
     const ready = Boolean(state.factorIndex && recognizer);
     const disabled = !ready || !state.quickFactorText.trim();
     return `<div class="quick-recognizer">
-      <div class="recognizer-head"><div><label class="recognizer-label" for="bulk-factor-input">一键识别因子文本</label><p class="recognizer-helper" id="bulk-factor-help">可分多段识别并累计到待导入清单，确认后一次应用。</p></div><span class="recognizer-kicker">${ready ? "本地解析" : "尚未就绪"}</span></div>
+      <div class="recognizer-head"><div><label class="recognizer-label" for="bulk-factor-input">粘贴攻略技能清单</label><p class="recognizer-helper" id="bulk-factor-help">支持多段累计、繁中转换和 OCR 容错。</p></div><span class="recognizer-kicker">${ready ? "本地解析" : "尚未就绪"}</span></div>
       <textarea class="recognizer-textarea" id="bulk-factor-input" aria-describedby="bulk-factor-help" placeholder="例如：毅力9本体3，英里9本体3，心头一击，位置感打基础点燃青春智，URA剧本" ${ready ? "" : "disabled"}>${escapeHtml(state.quickFactorText)}</textarea>
-      <div class="recognizer-actions"><span class="recognizer-hint">未写星级的新因子默认家系 1★、本体 0★；识别至少 20 个技能时会按原文顺序自动分为高 / 中 / 低。</span><button class="recognizer-button" id="recognize-factor-text" type="button" ${disabled ? "disabled" : ""}>${ICONS.scan}识别并预览</button></div>
+      <div class="recognizer-actions"><span class="recognizer-hint">未写星级：家系 1★ · 本体 0★；20 项以上按原文顺序自动分级。</span><button class="recognizer-button" id="recognize-factor-text" type="button" ${disabled ? "disabled" : ""}>${ICONS.scan}识别并预览</button></div>
       ${renderRecognitionNotice()}
       ${renderPendingRecognition()}
       ${renderRecognitionPreview()}
