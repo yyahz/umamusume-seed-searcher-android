@@ -764,7 +764,7 @@
     return `
       ${renderQuickRecognizer()}
       <div class="factor-manual-picker">
-        <div class="factor-tabs" role="tablist" aria-label="因子颜色">${["blue", "red", "green", "white"].map((colorId) => {
+        <div class="factor-tabs" role="tablist" aria-label="因子颜色">${state.colorOrder.map((colorId) => {
           const tabMeta = COLOR_META[colorId];
           return `<button type="button" role="tab" aria-selected="${state.activeColor === colorId}" class="factor-tab ${state.activeColor === colorId ? "active" : ""}" data-tab="${colorId}" style="--factor-color:${tabMeta.color};--factor-soft:${tabMeta.soft}">${tabMeta.name.replace("因子", "")}</button>`;
         }).join("")}</div>
@@ -924,6 +924,13 @@
     shadow.activeElement?.blur();
     state.colorOrder = [...order];
     savePreferences();
+    const factorTabs = shadow.querySelector(".factor-tabs");
+    if (factorTabs) {
+      state.colorOrder.forEach((colorId) => {
+        const tab = factorTabs.querySelector(`[data-tab="${colorId}"]`);
+        if (tab) factorTabs.appendChild(tab);
+      });
+    }
     if (!list) return;
     list.innerHTML = renderColorOrder();
     bindPriorityControls(list);
