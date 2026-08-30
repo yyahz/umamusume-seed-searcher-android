@@ -361,32 +361,43 @@
       .status.error { color:var(--danger); }
       .status.success { color:var(--brand-dark); }
       .results-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:10px; }
-      .result-count { color:var(--muted); font-size:12px; }
+      .results-tools { flex:0 0 auto; display:flex; align-items:center; gap:8px; }
+      .result-count { color:var(--muted); font-size:12px; white-space:nowrap; }
+      .results-rerun { min-height:36px; border:1px solid var(--line); border-radius:10px; padding:0 10px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; }
       .result-list { display:grid; gap:10px; }
       .result-card { overflow:hidden; border:1px solid var(--line); border-radius:16px; background:#fff; }
       .result-top { display:grid; grid-template-columns:58px minmax(0,1fr) auto; align-items:center; gap:10px; padding:12px; }
       .hero-image { width:58px; height:58px; object-fit:cover; border:1px solid var(--line); border-radius:14px; background:#eef2ed; }
-      .result-name { overflow:hidden; font-weight:800; white-space:nowrap; text-overflow:ellipsis; }
+      .result-identity { min-width:0; }
+      .result-name { font-weight:800; overflow-wrap:anywhere; }
       .result-meta { margin-top:4px; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+      .result-meta-row { display:flex; align-items:center; gap:8px; }
+      .result-meta-row .result-meta { min-width:0; flex:1; }
+      .result-rank { position:absolute; left:-4px; top:-5px; min-width:28px; height:24px; display:grid; place-items:center; border:2px solid #fff; border-radius:99px; padding:0 5px; color:#fff; background:var(--brand-dark); box-shadow:0 2px 7px #1835222b; font-size:10px; font-weight:850; }
+      .hero-wrap { position:relative; }
       .score { min-width:66px; text-align:right; }
       .score-value { color:var(--brand-dark); font-size:24px; font-weight:850; font-variant-numeric:tabular-nums; line-height:1; }
       .score-label { margin-top:3px; color:var(--muted); font-size:10px; }
+      .result-copy { min-height:34px; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); border-radius:9px; padding:0 8px; color:var(--brand-dark); background:#fff; font-size:11px; font-weight:750; white-space:nowrap; }
       .score-track { height:6px; margin:0 12px; overflow:hidden; border-radius:99px; background:#e9eee9; }
       .score-fill { height:100%; border-radius:inherit; background:linear-gradient(90deg,#51b87a,#0c7445); }
       .breakdown { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; padding:10px 12px 6px; }
       .breakdown-item { min-width:0; border-radius:9px; padding:6px 5px; background:var(--factor-soft); color:var(--factor-color); text-align:center; }
       .breakdown-item b { display:block; font-size:13px; font-variant-numeric:tabular-nums; }
       .breakdown-item span { font-size:10px; }
-      .match-list { display:grid; gap:8px; padding:4px 12px 10px; }
+      .result-summary { margin:7px 12px 2px; border-radius:9px; padding:6px 8px; color:var(--muted); background:#f5f7f5; font-size:10px; line-height:1.4; }
+      .match-list { display:grid; gap:9px; padding:7px 12px 12px; }
       .result-factor-group { display:grid; gap:5px; }
       .result-factor-label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:10px; }
       .result-factor-label b { color:var(--ink); font-size:11px; }
-      .factor-chip-list { display:flex; flex-wrap:wrap; gap:5px; }
-      .match-chip { border-radius:999px; padding:4px 8px; color:var(--factor-color); background:var(--factor-soft); font-size:11px; font-weight:650; }
+      .factor-chip-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+      .match-chip { min-width:0; display:grid; gap:1px; border-radius:9px; padding:5px 7px; color:var(--factor-color); background:var(--factor-soft); font-size:11px; font-weight:650; line-height:1.3; overflow-wrap:anywhere; }
+      .factor-chip-name { font-weight:750; }
+      .factor-chip-stars { color:var(--factor-color); color:color-mix(in srgb,var(--factor-color) 74%,#526158); font-size:9px; font-variant-numeric:tabular-nums; }
       .match-chip.selected-factor { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--factor-color) 42%,transparent); font-weight:750; }
-      .match-chip.other-factor { color:color-mix(in srgb,var(--factor-color) 78%,#526158); background:color-mix(in srgb,var(--factor-soft) 72%,#f3f5f3); }
+      .match-chip.other-factor { color:var(--ink); background:#fff; box-shadow:inset 3px 0 0 var(--factor-color),inset 0 0 0 1px #e2e7e2; }
+      .match-chip.other-factor .factor-chip-stars { color:var(--factor-color); }
       .match-chip.shortfall { border:1px dashed var(--factor-color); background:#fff; }
-      .result-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px 10px; border-top:1px solid #edf0ed; }
       .copy-button { min-height:44px; flex:0 0 auto; display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:11px; padding:0 12px; color:var(--brand-dark); background:#fff; font-weight:700; white-space:nowrap; }
       .scope-note { min-width:0; color:var(--muted); font-size:11px; }
       .loading-line { height:3px; overflow:hidden; border-radius:99px; background:#dfe8e1; }
@@ -806,39 +817,51 @@
     const requestedKeys = new Set(
       item.matches.map((match) => ranking.factorKey(match.type, match.num))
     );
-    const requestedBlueRed = [];
-    const requestedOther = [];
+    const requestedByColor = new Map(state.colorOrder.map((colorId) => [colorId, []]));
     for (const match of item.matches) {
       const matchMeta = factorVisualMeta(match);
       const matchName = match.virtualGold ? `${match.name} → ${match.lowerSkillName}` : match.name;
-      const chip = `<span class="match-chip selected-factor ${match.meetsThreshold ? "" : "shortfall"}" style="--factor-color:${matchMeta.color};--factor-soft:${matchMeta.soft}">${match.tier === ranking.REQUIRED_TIER ? "必需 · " : ""}${escapeHtml(matchName)} · 家系 ${match.stars}★ · 本体 ${match.selfStars}★${match.meetsThreshold ? "" : " · 未达标"}</span>`;
-      if (match.colorId === "blue" || match.colorId === "red") requestedBlueRed.push(chip);
-      else requestedOther.push(chip);
+      const chip = `<span class="match-chip selected-factor ${match.meetsThreshold ? "" : "shortfall"}" style="--factor-color:${matchMeta.color};--factor-soft:${matchMeta.soft}"><span class="factor-chip-name">${match.tier === ranking.REQUIRED_TIER ? "必需 · " : ""}${escapeHtml(matchName)}</span><span class="factor-chip-stars">家系 ${match.stars}★ · 本体 ${match.selfStars}★${match.meetsThreshold ? "" : " · 未达标"}</span></span>`;
+      if (!requestedByColor.has(match.colorId)) requestedByColor.set(match.colorId, []);
+      requestedByColor.get(match.colorId).push(chip);
     }
 
-    const typeOrder = new Map([1, 2, 3, 4, 5, 6].map((type, index) => [type, index]));
-    const additional = ranking.summarizeCandidateFactors(item.candidate)
+    const preferredBlueRed = state.colorOrder.filter((colorId) => colorId === "blue" || colorId === "red");
+    const displayColorOrder = [...preferredBlueRed, ...state.colorOrder.filter((colorId) => colorId !== "blue" && colorId !== "red")];
+    const requested = displayColorOrder.flatMap((colorId) => requestedByColor.get(colorId) || []);
+    const additionalByColor = new Map(displayColorOrder.map((colorId) => [colorId, []]));
+    ranking.summarizeCandidateFactors(item.candidate)
       .filter((factor) => !requestedKeys.has(ranking.factorKey(factor.type, factor.num)))
       .sort((left, right) =>
-        (typeOrder.get(left.type) ?? 99) - (typeOrder.get(right.type) ?? 99)
+        displayColorOrder.indexOf(left.colorId) - displayColorOrder.indexOf(right.colorId)
+        || left.type - right.type
         || left.name.localeCompare(right.name, "zh-CN")
       )
-      .map((factor) => {
+      .forEach((factor) => {
         const factorMeta = factorVisualMeta(factor);
         const factorName = state.factorCatalogNames.get(ranking.factorKey(factor.type, factor.num)) || factor.name;
-        return `<span class="match-chip other-factor" title="该种马的其他${factorMeta.name}" style="--factor-color:${factorMeta.color};--factor-soft:${factorMeta.soft}">${escapeHtml(factorName)} · 家系 ${factor.stars}★ · 本体 ${factor.selfStars}★</span>`;
+        const chip = `<span class="match-chip other-factor" title="该种马的其他${factorMeta.name}" style="--factor-color:${factorMeta.color};--factor-soft:${factorMeta.soft}"><span class="factor-chip-name">${escapeHtml(factorName)}</span><span class="factor-chip-stars">家系 ${factor.stars}★ · 本体 ${factor.selfStars}★</span></span>`;
+        if (!additionalByColor.has(factor.colorId)) additionalByColor.set(factor.colorId, []);
+        additionalByColor.get(factor.colorId).push(chip);
       });
-    const requested = [...requestedBlueRed, ...requestedOther];
+    const additionalCount = [...additionalByColor.values()].reduce((sum, factors) => sum + factors.length, 0);
+    const additionalGroups = displayColorOrder.map((colorId) => {
+      const factors = additionalByColor.get(colorId) || [];
+      if (!factors.length) return "";
+      const meta = COLOR_META[colorId];
+      return `<div class="result-factor-group other-factors" style="--factor-color:${meta.color};--factor-soft:${meta.soft}"><div class="result-factor-label"><b>其他${meta.name}</b><span>${factors.length} 项</span></div><div class="factor-chip-list">${factors.join("")}</div></div>`;
+    }).join("");
     return `${requested.length ? `<div class="result-factor-group selected-factors"><div class="result-factor-label"><b>筛选因子</b><span>${requested.length} 项，优先展示</span></div><div class="factor-chip-list">${requested.join("")}</div></div>` : ""}
-      ${additional.length ? `<div class="result-factor-group other-factors"><div class="result-factor-label"><b>该种马其他因子</b><span>${additional.length} 项，全部展示</span></div><div class="factor-chip-list">${additional.join("")}</div></div>` : ""}`;
+      ${additionalCount ? `<div class="result-factor-label result-other-heading"><b>该种马其他因子</b><span>${additionalCount} 项，全部展示</span></div>${additionalGroups}` : ""}`;
   }
 
   function renderResults() {
     if (!state.results.length) return "";
+    const visibleResults = state.results.slice(0, 80);
     return `
       <section class="section" id="results-section">
-        <div class="results-head"><div><h2>推荐列表</h2><p class="helper">综合分仅用于本次偏好内的相对排序。</p></div><div class="result-count">共 ${state.results.length} 位候选</div></div>
-        <div class="result-list">${state.results.slice(0, 80).map((item, index) => {
+        <div class="results-head"><div><h2>推荐列表</h2><p class="helper">综合分仅用于本次偏好内的相对排序。</p></div><div class="results-tools"><div class="result-count" data-total-count="${state.results.length}">${visibleResults.length < state.results.length ? `前 ${visibleResults.length} / 共 ${state.results.length} 位` : `共 ${state.results.length} 位候选`}</div><button class="results-rerun" type="button" data-results-rerun ${state.busy ? "disabled" : ""}>重新搜索</button></div></div>
+        <div class="result-list">${visibleResults.map((item, index) => {
           const candidate = item.candidate || {};
           const hero = candidate.hero_card || {};
           const id = String(candidate.role_id || "未知");
@@ -855,14 +878,14 @@
           const selfShortfallCount = item.matches.filter((match) => !match.meetsSelfThreshold).length;
           return `<article class="result-card">
             <div class="result-top">
-              ${image ? `<img class="hero-image" src="${escapeHtml(image)}" alt="${escapeHtml(displayName)}头像" loading="lazy">` : '<div class="hero-image" aria-hidden="true"></div>'}
-              <div><div class="result-name">${escapeHtml(displayName)}</div><div class="result-meta">${escapeHtml(resultMeta)}</div></div>
+              <div class="hero-wrap">${image ? `<img class="hero-image" src="${escapeHtml(image)}" alt="${escapeHtml(displayName)}头像" loading="lazy">` : '<div class="hero-image" aria-hidden="true"></div>'}<span class="result-rank">#${index + 1}</span></div>
+              <div class="result-identity"><div class="result-name">${escapeHtml(displayName)}</div><div class="result-meta-row"><div class="result-meta">${escapeHtml(resultMeta)}</div><button class="result-copy" type="button" data-copy-id="${escapeHtml(id)}" aria-label="复制好友 ID ${escapeHtml(id)}">${ICONS.copy}<span>复制</span></button></div></div>
               <div class="score"><div class="score-value">${item.score.toFixed(1)}</div><div class="score-label">综合匹配</div></div>
             </div>
             <div class="score-track" role="progressbar" aria-label="综合匹配" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${item.score.toFixed(1)}"><div class="score-fill" style="width:${Math.max(0, Math.min(100, item.score))}%"></div></div>
             <div class="breakdown">${renderBreakdown(item)}</div>
+            <div class="result-summary">缺少 ${item.misses.length} 项 · 家系不足 ${totalShortfallCount} 项 · 本体不足 ${selfShortfallCount} 项</div>
             <div class="match-list">${renderResultFactors(item)}</div>
-            <div class="result-actions"><span class="scope-note">第 ${index + 1} 名 · 缺少 ${item.misses.length} 项 · 家系不足 ${totalShortfallCount} 项 · 本体不足 ${selfShortfallCount} 项</span><button class="copy-button" type="button" data-copy-id="${escapeHtml(id)}">${ICONS.copy}复制 ID</button></div>
           </article>`;
         }).join("")}</div>
       </section>`;
@@ -1407,6 +1430,7 @@
     shadow.getElementById("force-refresh")?.addEventListener("change", (event) => {
       state.forceRefresh = event.target.checked;
     });
+    shadow.querySelector("[data-results-rerun]")?.addEventListener("click", () => elements.searchButton.click());
     shadow.querySelectorAll("[data-copy-id]").forEach((button) => button.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(button.dataset.copyId);

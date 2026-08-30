@@ -276,7 +276,8 @@
     const resultsSection = ui.root.getElementById("results-section");
     const roleCount = textCount(roleSection?.querySelector(".badge"));
     const factorCount = textCount(factorSection?.querySelector(".badge"));
-    const resultCount = textCount(resultsSection?.querySelector(".result-count"));
+    const resultCountElement = resultsSection?.querySelector(".result-count");
+    const resultCount = Number(resultCountElement?.dataset.totalCount) || textCount(resultCountElement);
     const counts = { roles: roleCount, factors: factorCount, results: resultCount };
     ui.host.dataset.mobileHasFactors = String(factorCount > 0);
 
@@ -448,8 +449,7 @@
         padding:14px 12px calc(var(--mobile-nav-height) + 18px + env(safe-area-inset-bottom));
         scroll-behavior:smooth;
       }
-      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body,
-      :host([data-mobile-ui="true"][data-mobile-page="results"]) .panel-body {
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body {
         padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-action-height) + 20px + env(safe-area-inset-bottom));
       }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { order:1; }
@@ -692,17 +692,35 @@
         line-height:1.35;
       }
       :host([data-mobile-ui="true"]) .toggle input { width:18px; height:18px; flex:0 0 auto; }
-      :host([data-mobile-ui="true"]) .result-card { border:0; border-radius:18px; box-shadow:inset 0 0 0 1px var(--line); }
-      :host([data-mobile-ui="true"]) .result-top { grid-template-columns:54px minmax(0,1fr) auto; padding:12px; }
-      :host([data-mobile-ui="true"]) .hero-image { width:54px; height:54px; }
-      :host([data-mobile-ui="true"]) .result-name { font-size:15px; }
-      :host([data-mobile-ui="true"]) .result-meta { white-space:normal; line-height:1.45; }
-      :host([data-mobile-ui="true"]) .breakdown { grid-template-columns:repeat(2,1fr); gap:7px; }
-      :host([data-mobile-ui="true"]) .breakdown-item { min-height:52px; display:grid; place-content:center; border-radius:12px; }
-      :host([data-mobile-ui="true"]) .match-chip { padding:6px 9px; font-size:12px; line-height:1.45; }
-      :host([data-mobile-ui="true"]) .result-actions { align-items:stretch; flex-direction:column; padding:10px 12px 12px; }
-      :host([data-mobile-ui="true"]) .scope-note { text-align:center; line-height:1.5; }
-      :host([data-mobile-ui="true"]) .copy-button { width:100%; justify-content:center; min-height:48px; }
+      :host([data-mobile-ui="true"][data-mobile-page="results"]) #results-section { padding:12px; }
+      :host([data-mobile-ui="true"]) .results-head { align-items:flex-start; margin-bottom:9px; }
+      :host([data-mobile-ui="true"]) .results-head .helper { display:none; }
+      :host([data-mobile-ui="true"]) .results-tools { align-items:center; flex-direction:row; gap:6px; }
+      :host([data-mobile-ui="true"]) .result-count { font-size:10px; }
+      :host([data-mobile-ui="true"]) .results-rerun { min-height:34px; padding-inline:9px; }
+      :host([data-mobile-ui="true"]) .result-card { border:0; border-radius:16px; box-shadow:inset 0 0 0 1px var(--line); }
+      :host([data-mobile-ui="true"]) .result-top { grid-template-columns:48px minmax(0,1fr) auto; gap:8px; padding:10px; }
+      :host([data-mobile-ui="true"]) .hero-image { width:48px; height:48px; border-radius:12px; }
+      :host([data-mobile-ui="true"]) .result-rank { left:-4px; top:-5px; height:22px; min-width:26px; font-size:9px; }
+      :host([data-mobile-ui="true"]) .result-name { font-size:14px; line-height:1.25; }
+      :host([data-mobile-ui="true"]) .result-meta { margin-top:2px; white-space:normal; font-size:10px; line-height:1.35; }
+      :host([data-mobile-ui="true"]) .result-meta-row { align-items:flex-end; gap:5px; }
+      :host([data-mobile-ui="true"]) .result-copy { min-height:32px; padding:0 7px; }
+      :host([data-mobile-ui="true"]) .result-copy svg { width:14px; height:14px; }
+      :host([data-mobile-ui="true"]) .score { min-width:48px; }
+      :host([data-mobile-ui="true"]) .score-value { font-size:21px; }
+      :host([data-mobile-ui="true"]) .score-track { height:5px; margin-inline:10px; }
+      :host([data-mobile-ui="true"]) .breakdown { grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; padding:8px 10px 4px; }
+      :host([data-mobile-ui="true"]) .breakdown-item { min-height:43px; display:grid; place-content:center; border-radius:9px; padding:4px 2px; }
+      :host([data-mobile-ui="true"]) .breakdown-item b { font-size:12px; }
+      :host([data-mobile-ui="true"]) .breakdown-item span { font-size:8px; line-height:1.25; }
+      :host([data-mobile-ui="true"]) .result-summary { margin:5px 10px 1px; padding:5px 7px; }
+      :host([data-mobile-ui="true"]) .match-list { gap:8px; padding:6px 10px 10px; }
+      :host([data-mobile-ui="true"]) .result-factor-label { gap:5px; }
+      :host([data-mobile-ui="true"]) .result-other-heading { margin-top:2px; padding-top:7px; border-top:1px solid var(--line); }
+      :host([data-mobile-ui="true"]) .factor-chip-list { grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; }
+      :host([data-mobile-ui="true"]) .match-chip { border-radius:8px; padding:5px 6px; font-size:10px; line-height:1.25; }
+      :host([data-mobile-ui="true"]) .factor-chip-stars { font-size:8px; }
       :host([data-mobile-ui="true"]) .action-bar {
         display:none!important;
         z-index:5;
@@ -714,8 +732,7 @@
         box-shadow:0 -5px 18px #1835220d;
         backdrop-filter:none;
       }
-      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar,
-      :host([data-mobile-ui="true"][data-mobile-page="results"]) .action-bar { display:grid!important; }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar { display:grid!important; }
       :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="preview"]) .action-bar,
       :host([data-mobile-ui="true"][data-mobile-page="factors"][data-mobile-recognition-state="draft"]) .action-bar { display:none!important; }
       :host([data-mobile-ui="true"]) .mobile-recognition-bar {
