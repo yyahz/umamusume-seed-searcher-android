@@ -855,6 +855,10 @@
   }
 
   function render() {
+    const renderScrollTop = elements.body.scrollTop;
+    shadow.dispatchEvent(new CustomEvent("uma-seed-render-start", {
+      detail: { scrollTop: renderScrollTop }
+    }));
     const selectedCount = state.selected.size;
     const hasRecognitionWork = Boolean(
       state.recognitionBatches.length || state.recognition || state.quickFactorText.trim()
@@ -895,6 +899,9 @@
       : remainingCooldown > 0 ? `请稍候 ${remainingCooldown} 秒` : "开始寻找合适种马";
     scheduleCooldownRender();
     bindRenderedEvents();
+    shadow.dispatchEvent(new CustomEvent("uma-seed-render-end", {
+      detail: { scrollTop: renderScrollTop }
+    }));
   }
 
   function moveColor(colorId, delta) {

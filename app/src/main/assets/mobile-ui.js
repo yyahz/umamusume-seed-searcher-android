@@ -24,6 +24,7 @@
   let colorDrag = null;
   let colorSettleTimer = 0;
   let scrollRestoreToken = 0;
+  let renderScrollSnapshot = null;
   const scrollPositions = new Map();
 
   function loadFactorEntryMode() {
@@ -335,8 +336,11 @@
     mapSections(ui);
     const pageName = PAGE_LABELS[page];
     ui.panel.setAttribute("aria-label", `种马搜索器 · ${pageName}`);
+    const targetTop = options.resetScroll ? 0 : (scrollPositions.get(page) || 0);
+    if (options.resetScroll) scrollPositions.set(page, 0);
+    ui.body.scrollTop = targetTop;
     requestAnimationFrame(() => {
-      ui.body.scrollTop = options.resetScroll ? 0 : (scrollPositions.get(page) || 0);
+      ui.body.scrollTop = targetTop;
       const heading = ui.body.querySelector(`.section[data-mobile-section~="${page}"] h2`);
       heading?.setAttribute("tabindex", "-1");
     });
@@ -829,6 +833,23 @@
         requestAnimationFrame(() => updateRolePagination(findUi(), true));
       }
     }, true);
+    ui.root.addEventListener("uma-seed-render-start", (event) => {
+      const top = Number(event.detail?.scrollTop);
+      renderScrollSnapshot = {
+        page: activePage,
+        top: Number.isFinite(top) ? top : ui.body.scrollTop
+      };
+      scrollPositions.set(renderScrollSnapshot.page, renderScrollSnapshot.top);
+    });
+    ui.root.addEventListener("uma-seed-render-end", () => {
+      const snapshot = renderScrollSnapshot;
+      renderScrollSnapshot = null;
+      if (!snapshot || snapshot.page !== activePage) return;
+      const currentUi = findUi();
+      if (!currentUi) return;
+      mapSections(currentUi);
+      restoreScrollPosition(currentUi, snapshot.page, snapshot.top, true);
+    });
 
     const observer = new MutationObserver(() => {
       if (applyScheduled) return;
