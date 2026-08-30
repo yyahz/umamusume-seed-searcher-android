@@ -20,6 +20,7 @@
   let applyScheduled = false;
   let awaitingResults = false;
   let colorDrag = null;
+  let colorSettleTimer = 0;
   let scrollRestoreToken = 0;
   const scrollPositions = new Map();
 
@@ -55,8 +56,9 @@
   }
 
   function clearColorDragIndicators(ui) {
-    ui?.root.querySelectorAll("#priority-list .dragging,#priority-list .drop-before,#priority-list .drop-after").forEach((item) => {
-      item.classList.remove("dragging", "drop-before", "drop-after");
+    ui?.root.querySelectorAll("#priority-list .dragging,#priority-list .drag-settling,#priority-list .drop-before,#priority-list .drop-after").forEach((item) => {
+      item.classList.remove("dragging", "drag-settling", "drop-before", "drop-after");
+      item.style.removeProperty("--mobile-drag-y");
     });
   }
 
@@ -82,11 +84,13 @@
   }
 
   function beginColorDrag(target, inputId, clientY, ui) {
+    if (colorSettleTimer) return false;
     const handle = target instanceof Element ? target.closest("#priority-list .priority-item > div") : null;
     const item = handle?.closest(".priority-item");
     const list = item?.closest("#priority-list");
     if (!handle || !item || !list) return false;
     const items = [...list.querySelectorAll(".priority-item")];
+    const itemTop = item.getBoundingClientRect().top;
     colorDrag = {
       inputId,
       color: item.dataset.color,
@@ -95,9 +99,11 @@
       startY: clientY,
       startIndex: items.indexOf(item),
       targetIndex: items.indexOf(item),
+      slotOffsets: items.map((candidate) => candidate.getBoundingClientRect().top - itemTop),
       savedTop: ui.body.scrollTop,
       moved: false
     };
+    item.style.setProperty("--mobile-drag-y", "0px");
     item.classList.add("dragging");
     return true;
   }
@@ -106,6 +112,10 @@
     if (!colorDrag || inputId !== colorDrag.inputId) return;
     if (Math.abs(clientY - colorDrag.startY) >= 6) colorDrag.moved = true;
     if (!colorDrag.moved) return;
+    const minOffset = colorDrag.slotOffsets[0];
+    const maxOffset = colorDrag.slotOffsets[colorDrag.slotOffsets.length - 1];
+    const dragOffset = Math.min(maxOffset, Math.max(minOffset, clientY - colorDrag.startY));
+    colorDrag.item.style.setProperty("--mobile-drag-y", `${dragOffset}px`);
     colorDrag.targetIndex = colorInsertionIndex(colorDrag.list, colorDrag.item, clientY);
     colorDrag.list.querySelectorAll(".drop-before,.drop-after").forEach((item) => {
       item.classList.remove("drop-before", "drop-after");
@@ -120,10 +130,22 @@
     if (!colorDrag || inputId !== colorDrag.inputId) return;
     const completed = colorDrag;
     colorDrag = null;
-    clearColorDragIndicators(ui);
-    if (!cancelled && completed.moved && completed.targetIndex !== completed.startIndex) {
-      moveColorToIndex(completed.color, completed.targetIndex, completed.savedTop);
+    completed.list.querySelectorAll(".drop-before,.drop-after").forEach((item) => {
+      item.classList.remove("drop-before", "drop-after");
+    });
+    if (cancelled || !completed.moved || completed.targetIndex === completed.startIndex) {
+      clearColorDragIndicators(ui);
+      return;
     }
+    const finish = () => {
+      colorSettleTimer = 0;
+      clearColorDragIndicators(ui);
+      moveColorToIndex(completed.color, completed.targetIndex, completed.savedTop);
+    };
+    completed.item.classList.add("drag-settling");
+    completed.item.style.setProperty("--mobile-drag-y", `${completed.slotOffsets[completed.targetIndex]}px`);
+    if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) finish();
+    else colorSettleTimer = setTimeout(finish, 140);
   }
 
   function findTouch(event, inputId, changed = false) {
@@ -428,6 +450,16 @@
         cursor:grab;
       }
       :host([data-mobile-ui="true"]) #priority-list .priority-item.dragging > div { cursor:grabbing; }
+      :host([data-mobile-ui="true"]) #priority-list .priority-item.dragging {
+        z-index:5;
+        opacity:.98;
+        transform:translate3d(0,var(--mobile-drag-y,0),0);
+        box-shadow:0 14px 30px #173d292e,inset 0 0 0 1px color-mix(in srgb,var(--factor-color) 32%,var(--line));
+        will-change:transform;
+      }
+      :host([data-mobile-ui="true"]) #priority-list .priority-item.drag-settling {
+        transition:transform 140ms cubic-bezier(.2,.8,.2,1),box-shadow 140ms ease;
+      }
       :host([data-mobile-ui="true"]) .quick-recognizer {
         padding:12px;
         border:0;
@@ -597,6 +629,7 @@
       }
       @media (prefers-reduced-motion:reduce) {
         :host([data-mobile-ui="true"]) .panel-body { scroll-behavior:auto; }
+        :host([data-mobile-ui="true"]) #priority-list .priority-item.drag-settling { transition:none; }
       }
     `;
     ui.root.appendChild(style);
