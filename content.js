@@ -763,14 +763,18 @@
     const searchExamples = activeWhiteSubtype?.examples || meta.examples;
     return `
       ${renderQuickRecognizer()}
-      <div class="factor-tabs" role="tablist" aria-label="因子颜色">${state.colorOrder.map((colorId) => {
-        const tabMeta = COLOR_META[colorId];
-        return `<button type="button" role="tab" aria-selected="${state.activeColor === colorId}" class="factor-tab ${state.activeColor === colorId ? "active" : ""}" data-tab="${colorId}" style="--factor-color:${tabMeta.color};--factor-soft:${tabMeta.soft}">${tabMeta.name.replace("因子", "")}</button>`;
-      }).join("")}</div>
-      <div style="--factor-color:${meta.color};--factor-soft:${meta.soft}">
-        ${renderSubtypeTabs()}
-        <div class="search-field">${ICONS.search}<input class="search-input" id="factor-search" type="search" value="${escapeHtml(state.factorQuery)}" placeholder="搜索${searchLabel}，如${searchExamples}" aria-label="搜索${searchLabel}，示例：${searchExamples}" autocomplete="off" ${state.loadingFactors ? "disabled" : ""}></div>
-        <div class="catalog-shell" id="catalog-shell">${renderFactorCatalog()}</div>
+      <div class="factor-manual-picker">
+        <div class="factor-tabs" role="tablist" aria-label="因子颜色">${["blue", "red", "green", "white"].map((colorId) => {
+          const tabMeta = COLOR_META[colorId];
+          return `<button type="button" role="tab" aria-selected="${state.activeColor === colorId}" class="factor-tab ${state.activeColor === colorId ? "active" : ""}" data-tab="${colorId}" style="--factor-color:${tabMeta.color};--factor-soft:${tabMeta.soft}">${tabMeta.name.replace("因子", "")}</button>`;
+        }).join("")}</div>
+        <div style="--factor-color:${meta.color};--factor-soft:${meta.soft}">
+          ${renderSubtypeTabs()}
+          <div class="search-field">${ICONS.search}<input class="search-input" id="factor-search" type="search" value="${escapeHtml(state.factorQuery)}" placeholder="搜索${searchLabel}，如${searchExamples}" aria-label="搜索${searchLabel}，示例：${searchExamples}" autocomplete="off" ${state.loadingFactors ? "disabled" : ""}></div>
+          <div class="catalog-shell" id="catalog-shell">${renderFactorCatalog()}</div>
+        </div>
+      </div>
+      <div class="factor-selected-editor" style="--factor-color:${meta.color};--factor-soft:${meta.soft}">
         ${renderSelectedForColor(state.activeColor)}
       </div>`;
   }
@@ -866,7 +870,7 @@
         <ol class="priority-list" id="priority-list">${renderColorOrder()}</ol>
       </section>
       <section class="section">
-        <div class="section-head"><div><h2>3. 选择具体因子、双星级与优先级</h2><p class="helper">星级均为最低门槛；本体 0★ 表示本体可以没有该因子。蓝、红因子未同时达到家系与本体门槛时得 0 分；白因子可设为“必需”（100权重）。</p></div><div class="section-head-actions"><span class="badge" style="--factor-color:${activeMeta.color};--factor-soft:${activeMeta.soft}">${selectedCount} 项</span>${selectedCount || hasRecognitionWork ? '<button class="reset-factors" id="reset-factors" type="button">重置因子</button>' : ""}</div></div>
+        <div class="section-head"><div><h2>3. 选择具体因子、双星级与优先级</h2><p class="helper">星级均为最低门槛；本体 0★ 表示本体可以没有该因子。蓝、红因子未同时达到家系与本体门槛时得 0 分；白因子可设为“必需”（100权重）。</p></div><div class="section-head-actions"><span class="badge" style="--factor-color:${activeMeta.color};--factor-soft:${activeMeta.soft}">${selectedCount} 项</span>${selectedCount || hasRecognitionWork ? '<button class="reset-factors" id="reset-factors" type="button">清空</button>' : ""}</div></div>
         ${state.loadingFactors ? '<div class="loading-line" aria-label="正在加载因子目录"></div>' : renderConfigurator()}
       </section>
       <section class="section">

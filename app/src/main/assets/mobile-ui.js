@@ -14,15 +14,44 @@
     factors: "因子",
     results: "结果"
   };
+  const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
 
   let activePage = "roles";
   let rolePage = 0;
   let applyScheduled = false;
   let awaitingResults = false;
+  let factorEntryMode = loadFactorEntryMode();
   let colorDrag = null;
   let colorSettleTimer = 0;
   let scrollRestoreToken = 0;
   const scrollPositions = new Map();
+
+  function loadFactorEntryMode() {
+    try {
+      const saved = localStorage.getItem(FACTOR_MODE_STORAGE_KEY);
+      return saved === "recognizer" ? "recognizer" : "manual";
+    } catch (_) {
+      return "manual";
+    }
+  }
+
+  function setFactorEntryMode(ui, mode, persist = true) {
+    if (!ui || !["manual", "recognizer"].includes(mode)) return;
+    factorEntryMode = mode;
+    ui.host.dataset.mobileFactorMode = mode;
+    ui.root.querySelectorAll("[data-factor-entry-mode]").forEach((button) => {
+      const active = button.dataset.factorEntryMode === mode;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    if (persist) {
+      try {
+        localStorage.setItem(FACTOR_MODE_STORAGE_KEY, mode);
+      } catch (_) {
+        // The mode still works for the current session when storage is unavailable.
+      }
+    }
+  }
 
   function findUi() {
     const host = document.getElementById("uma-seed-optimizer-host");
@@ -183,16 +212,39 @@
     const helper = section?.querySelector(".section-head .helper");
     if (!heading || !helper) return;
     heading.textContent = "选择与调整因子";
-    helper.textContent = "可粘贴攻略智能识别或逐项选择；已选因子的星级与优先级可在目录下方调整。";
+    helper.textContent = "可逐项选择或粘贴攻略识别；已选项在下方统一调整。";
+  }
+
+  function ensureFactorModeSwitch(section, ui) {
+    const recognizer = section?.querySelector(".quick-recognizer");
+    if (!recognizer || !ui) return;
+    let control = section.querySelector(".mobile-factor-mode-switch");
+    if (!control) {
+      control = document.createElement("div");
+      control.className = "mobile-factor-mode-switch";
+      control.setAttribute("role", "tablist");
+      control.setAttribute("aria-label", "因子选择方式");
+      control.innerHTML = '<button type="button" role="tab" data-factor-entry-mode="manual">逐项选择</button><button type="button" role="tab" data-factor-entry-mode="recognizer">智能识别</button>';
+      recognizer.before(control);
+    }
+    setFactorEntryMode(ui, factorEntryMode, false);
   }
 
   function ensureFactorEditingHeading(section) {
     const firstTier = section?.querySelector(".tier-block");
-    if (!firstTier || section.querySelector(".mobile-selected-heading")) return;
-    const heading = document.createElement("div");
-    heading.className = "mobile-selected-heading";
-    heading.innerHTML = '<h3>已选因子设置</h3><p>设置家系、本体最低星级和高 / 中 / 低 / 必需优先级。</p>';
-    firstTier.before(heading);
+    if (!firstTier) return;
+    let heading = section.querySelector(".mobile-selected-heading");
+    if (!heading) {
+      heading = document.createElement("div");
+      heading.className = "mobile-selected-heading";
+      heading.innerHTML = '<div><h3>已选因子设置</h3><p>设置家系、本体最低星级和高 / 中 / 低 / 必需优先级。</p></div><div class="mobile-selected-actions"></div>';
+      firstTier.before(heading);
+    }
+    const reset = section.querySelector("#reset-factors");
+    if (reset) heading.querySelector(".mobile-selected-actions")?.appendChild(reset);
+    section.querySelectorAll(".tier-block").forEach((block) => {
+      block.classList.toggle("mobile-tier-empty", Boolean(block.querySelector(".tier-empty")));
+    });
   }
 
   function updateNavigation(ui) {
@@ -257,7 +309,10 @@
     if (factorSection) {
       factorSection.dataset.mobileSection = "factors";
       setFactorHeading(factorSection);
+      ensureFactorModeSwitch(factorSection, ui);
       ensureFactorEditingHeading(factorSection);
+      const activeFactorTab = factorSection.querySelector(".factor-tab.active[data-tab]");
+      if (activeFactorTab) ui.host.dataset.mobileFactorColor = activeFactorTab.dataset.tab;
     }
     if (settingsSection && settingsSection !== resultsSection) {
       settingsSection.dataset.mobileSection = "factors";
@@ -307,13 +362,14 @@
     };
     ui.host.dataset.mobileUi = "true";
     ui.host.dataset.mobilePage = activePage;
+    ui.host.dataset.mobileFactorMode = factorEntryMode;
 
     const style = document.createElement("style");
     style.id = "uma-mobile-ui-style";
     style.textContent = `
       :host([data-mobile-ui="true"]) {
         --mobile-nav-height:64px;
-        --mobile-action-height:88px;
+        --mobile-action-height:68px;
         --surface:#fff;
         --surface-2:#f4f7f5;
         --ink:#17241d;
@@ -460,7 +516,33 @@
       :host([data-mobile-ui="true"]) #priority-list .priority-item.drag-settling {
         transition:transform 140ms cubic-bezier(.2,.8,.2,1),box-shadow 140ms ease;
       }
+      :host([data-mobile-ui="true"]) .mobile-factor-mode-switch {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:4px;
+        margin-bottom:12px;
+        padding:4px;
+        border-radius:14px;
+        background:#edf2ef;
+      }
+      :host([data-mobile-ui="true"]) .mobile-factor-mode-switch button {
+        min-height:44px;
+        border:0;
+        border-radius:11px;
+        color:var(--muted);
+        background:transparent;
+        font-size:13px;
+        font-weight:750;
+      }
+      :host([data-mobile-ui="true"]) .mobile-factor-mode-switch button.active {
+        color:var(--brand-dark);
+        background:#fff;
+        box-shadow:0 3px 10px #173d2914;
+      }
+      :host([data-mobile-ui="true"][data-mobile-factor-mode="manual"]) .quick-recognizer { display:none; }
+      :host([data-mobile-ui="true"][data-mobile-factor-mode="recognizer"]) .factor-manual-picker { display:none; }
       :host([data-mobile-ui="true"]) .quick-recognizer {
+        margin-bottom:8px;
         padding:12px;
         border:0;
         border-radius:16px;
@@ -479,13 +561,23 @@
       :host([data-mobile-ui="true"]) .recognizer-button,
       :host([data-mobile-ui="true"]) .recognition-apply { min-height:46px; background:var(--brand); color:#fff; }
       :host([data-mobile-ui="true"]) .factor-tab { min-height:44px; border-radius:12px; font-size:13px; }
+      :host([data-mobile-ui="true"]) .factor-tabs { margin-bottom:8px; }
       :host([data-mobile-ui="true"]) .search-input { min-height:46px; border-radius:13px; font-size:16px; }
       :host([data-mobile-ui="true"]) .factor-option { min-height:48px; border-radius:11px; padding:7px 9px; }
+      :host([data-mobile-ui="true"]) #factor-catalog {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        grid-auto-rows:minmax(48px,auto);
+        align-items:start;
+        gap:6px;
+      }
+      :host([data-mobile-ui="true"][data-mobile-factor-color="white"]) #factor-catalog { grid-template-columns:1fr; }
       :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .tier-block,
       :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .mobile-selected-heading { display:none!important; }
-      :host([data-mobile-ui="true"]) .mobile-selected-heading { margin:16px 0 6px; }
+      :host([data-mobile-ui="true"]) .mobile-selected-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:16px 0 6px; }
       :host([data-mobile-ui="true"]) .mobile-selected-heading h3 { margin:0; font-size:17px; line-height:1.4; }
       :host([data-mobile-ui="true"]) .mobile-selected-heading p { margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
+      :host([data-mobile-ui="true"]) .mobile-selected-actions { flex:0 0 auto; }
+      :host([data-mobile-ui="true"]) .mobile-selected-actions .reset-factors { min-width:56px; min-height:44px; padding:0 10px; border:0; color:var(--danger); background:transparent; }
       :host([data-mobile-ui="true"]) .tier-block {
         margin-top:8px;
         border-radius:13px;
@@ -495,6 +587,15 @@
       :host([data-mobile-ui="true"]) .tier-help { display:none; }
       :host([data-mobile-ui="true"]) .selected-list { min-height:52px; gap:5px; padding:5px; }
       :host([data-mobile-ui="true"]) .tier-empty { min-height:42px; }
+      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty {
+        min-height:50px;
+        display:grid;
+        grid-template-columns:auto minmax(0,1fr);
+        align-items:center;
+      }
+      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .tier-label { min-height:50px; border-bottom:0; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .selected-list { min-height:50px; padding:0 10px 0 2px; }
+      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .tier-empty { min-height:50px; place-items:center start; text-align:left; }
       :host([data-mobile-ui="true"]) .selected-card {
         grid-template-columns:22px minmax(64px,1fr) 48px 48px 48px;
         grid-template-areas:"drag identity total self tier";
@@ -530,7 +631,8 @@
         display:none!important;
         z-index:5;
         bottom:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
-        padding:8px 12px;
+        gap:0;
+        padding:7px 12px;
         border-top:1px solid var(--line);
         background:#fffffff7;
         box-shadow:0 -5px 18px #1835220d;
@@ -538,9 +640,11 @@
       }
       :host([data-mobile-ui="true"][data-mobile-page="factors"]) .action-bar,
       :host([data-mobile-ui="true"][data-mobile-page="results"]) .action-bar { display:grid!important; }
-      :host([data-mobile-ui="true"]) .status { min-height:18px; overflow:hidden; font-size:11px; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .status { display:none; min-height:18px; overflow:hidden; font-size:11px; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .status.error,
+      :host([data-mobile-ui="true"]) .status.success { display:block; margin-bottom:4px; }
       :host([data-mobile-ui="true"]) .primary {
-        min-height:48px;
+        min-height:52px;
         border-radius:14px;
         background:var(--brand);
         box-shadow:0 7px 18px #16945e2b;
@@ -692,6 +796,11 @@
       scrollPositions.set(activePage, ui.body.scrollTop);
     }, true);
     ui.root.addEventListener("click", (event) => {
+      const factorModeButton = event.target.closest("[data-factor-entry-mode]");
+      if (factorModeButton) {
+        setFactorEntryMode(ui, factorModeButton.dataset.factorEntryMode);
+        return;
+      }
       const orderButton = event.target.closest("#priority-list .order-up,#priority-list .order-down");
       if (orderButton) {
         const savedTop = scrollPositions.get(activePage) ?? ui.body.scrollTop;
