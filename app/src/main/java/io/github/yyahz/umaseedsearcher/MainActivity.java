@@ -81,6 +81,7 @@ public final class MainActivity extends Activity {
     private volatile boolean updateDownloadInProgress;
     private File pendingUpdateFile;
     private boolean awaitingInstallPermission;
+    private boolean authenticationFlowActive;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -322,6 +323,10 @@ public final class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 if (!request.isForMainFrame()) return false;
+                if (isAuthenticationPage(uri)) {
+                    authenticationFlowActive = true;
+                    return false;
+                }
                 if (isBilibiliAppLink(uri)) {
                     returnToTool(view);
                     return true;
@@ -334,6 +339,10 @@ public final class MainActivity extends Activity {
                     returnToTool(view);
                     return true;
                 }
+                if (authenticationFlowActive && hasBilibiliSession() && isTrustedBilibiliPage(uri)) {
+                    returnToTool(view);
+                    return true;
+                }
                 if (isTrustedBilibiliPage(uri)) return false;
                 openExternal(uri);
                 return true;
@@ -343,7 +352,9 @@ public final class MainActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 errorPanel.setVisibility(View.GONE);
                 searchInterfaceReady = false;
-                if (isToolPage(Uri.parse(url))) showStartup();
+                Uri uri = Uri.parse(url);
+                if (isAuthenticationPage(uri)) authenticationFlowActive = true;
+                if (isToolPage(uri)) showStartup();
                 else showWebView();
             }
 
@@ -351,8 +362,12 @@ public final class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 Uri uri = Uri.parse(url);
                 if (isToolPage(uri)) {
+                    authenticationFlowActive = false;
                     injectExtension();
                 } else if (isBilibiliLandingPage(uri)) {
+                    returnToTool(view);
+                } else if (authenticationFlowActive && hasBilibiliSession()
+                    && isTrustedBilibiliPage(uri) && !isAuthenticationPage(uri)) {
                     returnToTool(view);
                 }
             }
@@ -642,8 +657,14 @@ public final class MainActivity extends Activity {
 
     private void returnToTool(WebView view) {
         CookieManager.getInstance().flush();
+        authenticationFlowActive = false;
         if (!TOOL_URL.equals(view.getUrl())) view.loadUrl(TOOL_URL);
         else view.reload();
+    }
+
+    private boolean hasBilibiliSession() {
+        String cookies = CookieManager.getInstance().getCookie("https://www.bilibili.com/");
+        return cookies != null && cookies.contains("SESSDATA=");
     }
 
     private boolean isExternalToolRequest(Uri uri) {
@@ -777,13 +798,16 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (!awaitingInstallPermission) return;
-        awaitingInstallPermission = false;
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls()) {
-            requestUpdateInstall();
-        } else {
-            notifyUpdateStatus("error", "未获得安装权限，更新已取消");
+        if (awaitingInstallPermission) {
+            awaitingInstallPermission = false;
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls()) {
+                requestUpdateInstall();
+            } else {
+                notifyUpdateStatus("error", "未获得安装权限，更新已取消");
+            }
+            return;
         }
+        if (authenticationFlowActive && hasBilibiliSession()) returnToTool(webView);
     }
 
     @Override
