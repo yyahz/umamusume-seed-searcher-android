@@ -21,6 +21,7 @@
   let applyScheduled = false;
   let awaitingResults = false;
   let factorEntryMode = loadFactorEntryMode();
+  let activeFactorTier = "1";
   let colorDrag = null;
   let colorSettleTimer = 0;
   let scrollRestoreToken = 0;
@@ -231,6 +232,19 @@
     setFactorEntryMode(ui, factorEntryMode, false);
   }
 
+  function applyFactorTierFilter(section, tier = activeFactorTier) {
+    const blocks = [...(section?.querySelectorAll(".tier-block[data-factor-tier]") || [])];
+    if (!blocks.length) return;
+    if (!blocks.some((block) => block.dataset.factorTier === String(tier))) tier = blocks[0].dataset.factorTier;
+    activeFactorTier = String(tier);
+    section.querySelectorAll("[data-mobile-tier-filter]").forEach((button) => {
+      const active = button.dataset.mobileTierFilter === activeFactorTier;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    blocks.forEach((block) => block.classList.toggle("mobile-tier-active", block.dataset.factorTier === activeFactorTier));
+  }
+
   function ensureFactorEditingHeading(section) {
     const firstTier = section?.querySelector(".tier-block");
     if (!firstTier) return;
@@ -238,14 +252,102 @@
     if (!heading) {
       heading = document.createElement("div");
       heading.className = "mobile-selected-heading";
-      heading.innerHTML = '<div><h3>已选因子设置</h3><p>设置家系、本体最低星级和高 / 中 / 低 / 必需优先级。</p></div><div class="mobile-selected-actions"></div>';
+      heading.innerHTML = '<div><h3>已选因子设置</h3><p>按优先级查看，点击因子卡修改。</p></div><div class="mobile-selected-actions"></div>';
       firstTier.before(heading);
     }
     const reset = section.querySelector("#reset-factors");
     if (reset) heading.querySelector(".mobile-selected-actions")?.appendChild(reset);
-    section.querySelectorAll(".tier-block").forEach((block) => {
+    const blocks = [...section.querySelectorAll(".tier-block[data-factor-tier]")];
+    let tabs = section.querySelector(".mobile-tier-tabs");
+    if (!tabs) {
+      tabs = document.createElement("div");
+      tabs.className = "mobile-tier-tabs";
+      tabs.setAttribute("role", "tablist");
+      tabs.setAttribute("aria-label", "因子优先级");
+      heading.after(tabs);
+    }
+    const tierNames = { "1": "高", "2": "中", "3": "低", "4": "必需" };
+    tabs.style.setProperty("--mobile-tier-count", String(blocks.length));
+    tabs.innerHTML = blocks.map((block) => {
+      const tier = block.dataset.factorTier;
+      const count = block.querySelectorAll(".selected-card").length;
+      return `<button type="button" role="tab" data-mobile-tier-filter="${tier}">${tierNames[tier] || tier}<span>${count}</span></button>`;
+    }).join("");
+    blocks.forEach((block) => {
       block.classList.toggle("mobile-tier-empty", Boolean(block.querySelector(".tier-empty")));
+      block.querySelectorAll(".selected-card").forEach((card) => {
+        card.draggable = false;
+        card.setAttribute("role", "button");
+        card.setAttribute("aria-label", `${card.querySelector(".selected-name")?.textContent || "因子"}，点击编辑`);
+        let summary = card.querySelector(".mobile-factor-card-summary");
+        if (!summary) {
+          summary = document.createElement("div");
+          summary.className = "mobile-factor-card-summary";
+          card.appendChild(summary);
+        }
+        const total = card.querySelector("[data-total-star-key]")?.value || "1";
+        const self = card.querySelector("[data-self-star-key]")?.value || "0";
+        summary.innerHTML = `<span>家系 ${total}★ · 本体 ${self}★</span><b>${tierNames[block.dataset.factorTier] || "高"}</b>`;
+      });
     });
+    applyFactorTierFilter(section);
+  }
+
+  function ensureFactorEditor(ui) {
+    let scrim = ui.panel.querySelector(".mobile-factor-editor-scrim");
+    let editor = ui.panel.querySelector(".mobile-factor-editor");
+    if (scrim && editor) return { scrim, editor };
+    scrim = document.createElement("div");
+    scrim.className = "mobile-factor-editor-scrim";
+    editor = document.createElement("section");
+    editor.className = "mobile-factor-editor";
+    editor.setAttribute("role", "dialog");
+    editor.setAttribute("aria-modal", "true");
+    editor.setAttribute("aria-label", "编辑因子");
+    editor.innerHTML = `<div class="mobile-editor-handle" aria-hidden="true"></div><div class="mobile-editor-head"><div><h3 data-mobile-editor-name>编辑因子</h3><p data-mobile-editor-subtype></p></div><button type="button" data-mobile-editor-close aria-label="关闭">×</button></div><div class="mobile-editor-fields"><label>家系至少<select data-mobile-editor-total></select></label><label>本体至少<select data-mobile-editor-self></select></label><label>优先级<select data-mobile-editor-tier></select></label></div><div class="mobile-editor-actions"><button class="mobile-editor-delete" type="button" data-mobile-editor-delete>删除</button><button type="button" data-mobile-editor-close>取消</button><button class="mobile-editor-save" type="button" data-mobile-editor-save>保存</button></div>`;
+    ui.panel.append(scrim, editor);
+    return { scrim, editor };
+  }
+
+  function closeFactorEditor(ui) {
+    if (!ui) return;
+    delete ui.host.dataset.mobileFactorEditorOpen;
+    const editor = ui.panel.querySelector(".mobile-factor-editor");
+    if (editor) delete editor.dataset.factorKey;
+  }
+
+  function openFactorEditor(ui, card) {
+    const key = card?.dataset.key;
+    const total = card?.querySelector("[data-total-star-key]");
+    const self = card?.querySelector("[data-self-star-key]");
+    const tier = card?.querySelector("[data-tier-key]");
+    if (!ui || !key || !total || !self || !tier) return;
+    const { editor } = ensureFactorEditor(ui);
+    editor.dataset.factorKey = key;
+    editor.querySelector("[data-mobile-editor-name]").textContent = card.querySelector(".selected-name")?.textContent || "编辑因子";
+    editor.querySelector("[data-mobile-editor-subtype]").textContent = card.querySelector(".selected-subtype")?.textContent || "";
+    [["[data-mobile-editor-total]", total], ["[data-mobile-editor-self]", self], ["[data-mobile-editor-tier]", tier]].forEach(([selector, source]) => {
+      const target = editor.querySelector(selector);
+      target.innerHTML = source.innerHTML;
+      target.value = source.value;
+    });
+    ui.host.dataset.mobileFactorEditorOpen = "true";
+    requestAnimationFrame(() => editor.querySelector("[data-mobile-editor-total]")?.focus({ preventScroll: true }));
+  }
+
+  function saveFactorEditor(ui) {
+    const editor = ui?.panel.querySelector(".mobile-factor-editor");
+    const key = editor?.dataset.factorKey;
+    if (!key) return;
+    ui.root.dispatchEvent(new CustomEvent("uma-seed-update-factor", {
+      detail: {
+        key,
+        minStars: editor.querySelector("[data-mobile-editor-total]")?.value,
+        minSelfStars: editor.querySelector("[data-mobile-editor-self]")?.value,
+        tier: editor.querySelector("[data-mobile-editor-tier]")?.value
+      }
+    }));
+    closeFactorEditor(ui);
   }
 
   function updateRecognitionActionBar(ui, factorSection) {
@@ -633,40 +735,93 @@
       :host([data-mobile-ui="true"]) .mobile-selected-heading p { margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
       :host([data-mobile-ui="true"]) .mobile-selected-actions { flex:0 0 auto; }
       :host([data-mobile-ui="true"]) .mobile-selected-actions .reset-factors { min-width:56px; min-height:44px; padding:0 10px; border:0; color:var(--danger); background:transparent; }
-      :host([data-mobile-ui="true"]) .tier-block {
-        margin-top:8px;
-        border-radius:13px;
-        background:#fbfcfb;
-      }
-      :host([data-mobile-ui="true"]) .tier-label { min-height:40px; padding:6px 9px; }
-      :host([data-mobile-ui="true"]) .tier-help { display:none; }
-      :host([data-mobile-ui="true"]) .selected-list { min-height:52px; gap:5px; padding:5px; }
-      :host([data-mobile-ui="true"]) .tier-empty { min-height:42px; }
-      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty {
-        min-height:50px;
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs {
         display:grid;
-        grid-template-columns:auto minmax(0,1fr);
+        grid-template-columns:repeat(var(--mobile-tier-count),minmax(0,1fr));
+        gap:5px;
+        margin:8px 0;
+        padding:4px;
+        border-radius:13px;
+        background:#eef2ef;
+      }
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs button {
+        min-height:42px;
+        display:flex;
         align-items:center;
+        justify-content:center;
+        gap:5px;
+        border:0;
+        border-radius:10px;
+        color:var(--muted);
+        background:transparent;
+        font-size:12px;
+        font-weight:800;
       }
-      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .tier-label { min-height:50px; border-bottom:0; white-space:nowrap; }
-      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .selected-list { min-height:50px; padding:0 10px 0 2px; }
-      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .tier-empty { min-height:50px; place-items:center start; text-align:left; }
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs button span { min-width:18px; border-radius:99px; padding:2px 5px; background:#ffffffa8; font-size:9px; }
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs button.active { color:var(--factor-color); background:#fff; box-shadow:0 3px 10px #173d2914; }
+      :host([data-mobile-ui="true"]) .tier-block {
+        display:none;
+        margin-top:6px;
+        overflow:visible;
+        border:0;
+        background:transparent;
+      }
+      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-active { display:block; }
+      :host([data-mobile-ui="true"]) .tier-label { display:none; }
+      :host([data-mobile-ui="true"]) .selected-list { min-height:52px; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; padding:0; }
+      :host([data-mobile-ui="true"]) .tier-empty { min-height:42px; }
+      :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .selected-list { grid-template-columns:1fr; }
       :host([data-mobile-ui="true"]) .selected-card {
-        grid-template-columns:22px minmax(64px,1fr) 48px 48px 48px;
-        grid-template-areas:"drag identity total self tier";
-        gap:4px;
-        min-height:68px;
-        padding:5px;
-        border-radius:11px;
-        cursor:default;
+        grid-template-columns:minmax(0,1fr) auto;
+        grid-template-areas:"identity summary";
+        align-items:center;
+        gap:6px;
+        min-height:72px;
+        padding:8px 7px;
+        border-left-width:3px;
+        border-radius:10px;
+        cursor:pointer;
+        touch-action:manipulation;
       }
-      :host([data-mobile-ui="true"]) .factor-drag-handle { grid-row:auto; width:22px; height:44px; }
-      :host([data-mobile-ui="true"]) .selected-name { font-size:12px; white-space:normal; line-height:1.3; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-      :host([data-mobile-ui="true"]) .selected-subtype,
+      :host([data-mobile-ui="true"]) .factor-drag-handle,
       :host([data-mobile-ui="true"]) .compact-factor-field,
-      :host([data-mobile-ui="true"]) .tier-field { gap:1px; font-size:9px; text-align:center; }
-      :host([data-mobile-ui="true"]) .star-select,
-      :host([data-mobile-ui="true"]) .tier-select { min-height:44px; border-radius:8px; padding:0 2px; font-size:10px; }
+      :host([data-mobile-ui="true"]) .tier-field { display:none!important; }
+      :host([data-mobile-ui="true"]) .selected-name { font-size:11px; white-space:normal; line-height:1.3; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+      :host([data-mobile-ui="true"]) .selected-subtype { margin-top:3px; overflow:hidden; font-size:9px; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary { grid-area:summary; display:grid; justify-items:end; gap:4px; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary span { color:var(--muted); font-size:8px; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary b { border-radius:99px; padding:3px 7px; color:var(--factor-color); background:var(--factor-soft); font-size:9px; }
+      :host([data-mobile-ui="true"]) .mobile-factor-editor-scrim { position:absolute; z-index:8; inset:0; display:none; background:#11291d73; }
+      :host([data-mobile-ui="true"]) .mobile-factor-editor {
+        position:absolute;
+        z-index:9;
+        left:0;
+        right:0;
+        bottom:0;
+        display:grid;
+        gap:14px;
+        padding:8px 16px calc(18px + env(safe-area-inset-bottom));
+        border-radius:22px 22px 0 0;
+        background:#fff;
+        box-shadow:0 -16px 40px #1027192e;
+        transform:translateY(105%);
+        transition:transform 180ms ease-out;
+      }
+      :host([data-mobile-ui="true"][data-mobile-factor-editor-open="true"]) .mobile-factor-editor-scrim { display:block; }
+      :host([data-mobile-ui="true"][data-mobile-factor-editor-open="true"]) .mobile-factor-editor { transform:translateY(0); }
+      :host([data-mobile-ui="true"][data-mobile-factor-editor-open="true"]) .panel-body { overflow:hidden!important; }
+      :host([data-mobile-ui="true"]) .mobile-editor-handle { width:38px; height:4px; margin:auto; border-radius:99px; background:#d8ded9; }
+      :host([data-mobile-ui="true"]) .mobile-editor-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-head h3 { margin:0; font-size:18px; line-height:1.35; }
+      :host([data-mobile-ui="true"]) .mobile-editor-head p { margin:3px 0 0; color:var(--muted); font-size:11px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-head button { width:44px; height:44px; border:0; border-radius:12px; color:var(--muted); background:#f2f5f2; font-size:24px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-fields label { display:grid; gap:5px; color:var(--muted); font-size:10px; font-weight:700; }
+      :host([data-mobile-ui="true"]) .mobile-editor-fields select { min-width:0; min-height:48px; border:1px solid var(--line); border-radius:11px; padding:0 6px; color:var(--ink); background:#fff; font-size:12px; font-weight:750; }
+      :host([data-mobile-ui="true"]) .mobile-editor-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+      :host([data-mobile-ui="true"]) .mobile-editor-actions button { min-height:48px; border:1px solid var(--line); border-radius:12px; color:var(--muted); background:#fff; font-weight:800; }
+      :host([data-mobile-ui="true"]) .mobile-editor-actions .mobile-editor-delete { color:var(--danger); border-color:#f0d5d1; background:#fff8f7; }
+      :host([data-mobile-ui="true"]) .mobile-editor-actions .mobile-editor-save { color:#fff; border-color:var(--brand); background:var(--brand); }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { padding:14px; }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .section-head { margin-bottom:10px; }
       :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .section-head h2 { font-size:17px; }
@@ -841,7 +996,8 @@
       @media (max-width:370px) {
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
-        :host([data-mobile-ui="true"]) .selected-card { grid-template-columns:20px minmax(58px,1fr) 46px 46px 46px; }
+        :host([data-mobile-ui="true"]) .selected-list { gap:5px; }
+        :host([data-mobile-ui="true"]) .selected-card { min-height:68px; padding-inline:6px; }
         :host([data-mobile-ui="true"]) .factor-description { display:none; }
       }
       @media (max-width:330px) {
@@ -917,6 +1073,31 @@
       scrollPositions.set(activePage, ui.body.scrollTop);
     }, true);
     ui.root.addEventListener("click", (event) => {
+      if (event.target.closest(".mobile-factor-editor-scrim,[data-mobile-editor-close]")) {
+        closeFactorEditor(ui);
+        return;
+      }
+      if (event.target.closest("[data-mobile-editor-save]")) {
+        saveFactorEditor(ui);
+        return;
+      }
+      if (event.target.closest("[data-mobile-editor-delete]")) {
+        const editor = ui.panel.querySelector(".mobile-factor-editor");
+        const key = editor?.dataset.factorKey;
+        if (key) ui.root.dispatchEvent(new CustomEvent("uma-seed-remove-factor", { detail: { key } }));
+        closeFactorEditor(ui);
+        return;
+      }
+      const tierFilter = event.target.closest("[data-mobile-tier-filter]");
+      if (tierFilter) {
+        applyFactorTierFilter(tierFilter.closest(".section"), tierFilter.dataset.mobileTierFilter);
+        return;
+      }
+      const selectedCard = event.target.closest(".selected-card[data-key]");
+      if (selectedCard && ui.host.dataset.mobilePage === "factors") {
+        openFactorEditor(ui, selectedCard);
+        return;
+      }
       const recognitionForward = event.target.closest("[data-recognition-forward]");
       if (recognitionForward) {
         ui.root.getElementById(recognitionForward.dataset.recognitionForward)?.click();
@@ -962,6 +1143,7 @@
       }
     }, true);
     ui.root.addEventListener("uma-seed-render-start", (event) => {
+      closeFactorEditor(ui);
       const top = Number(event.detail?.scrollTop);
       renderScrollSnapshot = {
         page: activePage,

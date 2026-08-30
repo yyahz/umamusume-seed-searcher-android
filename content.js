@@ -1572,6 +1572,28 @@
     updateColorOrder(order);
   });
 
+  shadow.addEventListener("uma-seed-update-factor", (event) => {
+    const key = String(event.detail?.key || "");
+    const item = state.selected.get(key);
+    if (!item) return;
+    invalidateFactorImportUndo();
+    item.minStars = ranking.clampFactorStars(event.detail?.minStars);
+    item.minSelfStars = ranking.clampSelfStars(event.detail?.minSelfStars);
+    item.tier = ranking.clampTier(event.detail?.tier, item.tier, item.colorId === "white");
+    state.selected.set(key, item);
+    savePreferences();
+    render();
+  });
+
+  shadow.addEventListener("uma-seed-remove-factor", (event) => {
+    const key = String(event.detail?.key || "");
+    if (!state.selected.has(key)) return;
+    invalidateFactorImportUndo();
+    state.selected.delete(key);
+    savePreferences();
+    render();
+  });
+
   async function initialize() {
     try {
       await loadPreferences();
