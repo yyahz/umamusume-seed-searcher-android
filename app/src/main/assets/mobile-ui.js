@@ -622,10 +622,33 @@
       :host([data-mobile-ui="true"]) .tier-field { gap:1px; font-size:9px; text-align:center; }
       :host([data-mobile-ui="true"]) .star-select,
       :host([data-mobile-ui="true"]) .tier-select { min-height:44px; border-radius:8px; padding:0 2px; font-size:10px; }
-      :host([data-mobile-ui="true"]) .settings { grid-template-columns:1fr; gap:12px; }
-      :host([data-mobile-ui="true"]) .field-label { font-size:13px; }
-      :host([data-mobile-ui="true"]) .select,
-      :host([data-mobile-ui="true"]) .toggle { min-height:48px; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] { padding:14px; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .section-head { margin-bottom:10px; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .section-head h2 { font-size:17px; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="settings"] .helper { display:none; }
+      :host([data-mobile-ui="true"]) .settings { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+      :host([data-mobile-ui="true"]) .field-label { min-width:0; font-size:11px; }
+      :host([data-mobile-ui="true"]) .settings .field-label:first-child {
+        grid-column:1 / -1;
+        display:grid;
+        grid-template-columns:auto minmax(0,1fr);
+        align-items:center;
+        gap:10px;
+      }
+      :host([data-mobile-ui="true"]) .settings .field-label:first-child .select { margin-top:0; }
+      :host([data-mobile-ui="true"]) .select { min-height:44px; }
+      :host([data-mobile-ui="true"]) .toggle {
+        min-height:48px;
+        margin-top:4px;
+        gap:6px;
+        border:1px solid var(--line);
+        border-radius:11px;
+        padding:4px 8px;
+        background:#fbfcfb;
+        font-size:11px;
+        line-height:1.35;
+      }
+      :host([data-mobile-ui="true"]) .toggle input { width:18px; height:18px; flex:0 0 auto; }
       :host([data-mobile-ui="true"]) .result-card { border:0; border-radius:18px; box-shadow:inset 0 0 0 1px var(--line); }
       :host([data-mobile-ui="true"]) .result-top { grid-template-columns:54px minmax(0,1fr) auto; padding:12px; }
       :host([data-mobile-ui="true"]) .hero-image { width:54px; height:54px; }
@@ -735,6 +758,9 @@
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
         :host([data-mobile-ui="true"]) .selected-card { grid-template-columns:20px minmax(58px,1fr) 46px 46px 46px; }
         :host([data-mobile-ui="true"]) .factor-description { display:none; }
+      }
+      @media (max-width:330px) {
+        :host([data-mobile-ui="true"]) .settings { grid-template-columns:1fr; }
       }
       @media (orientation:landscape) and (max-height:520px) {
         :host([data-mobile-ui="true"]) .panel-header { min-height:54px; padding-block:6px; }
