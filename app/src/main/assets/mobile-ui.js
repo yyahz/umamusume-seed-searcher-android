@@ -22,6 +22,7 @@
   let awaitingResults = false;
   let factorEntryMode = loadFactorEntryMode();
   let activeFactorTier = "1";
+  let recognitionPage = 0;
   let colorDrag = null;
   let colorSettleTimer = 0;
   let scrollRestoreToken = 0;
@@ -209,6 +210,40 @@
     controls.innerHTML = `<button type="button" data-role-page="previous" ${rolePage === 0 ? "disabled" : ""}>上一组</button><span>第 ${rolePage + 1} / ${pageCount} 组</span><button type="button" data-role-page="next" ${rolePage >= pageCount - 1 ? "disabled" : ""}>下一组</button>`;
   }
 
+  function updateRecognitionPagination(ui, reset = false) {
+    if (!ui) return;
+    const feedback = ui.root.getElementById("recognition-feedback");
+    const list = feedback?.querySelector(".recognition-list");
+    if (!feedback || !list) return;
+    const items = [...list.querySelectorAll(":scope > .recognition-item")];
+    items.forEach((item) => {
+      const stars = item.querySelector(".recognition-stars");
+      if (!stars || stars.dataset.mobileCompact === "true") return;
+      const text = stars.textContent || "";
+      const total = text.match(/家系\s*(\d+)★/)?.[1];
+      const self = text.match(/本体\s*(\d+)★/)?.[1];
+      const tier = text.match(/(?:^|·\s*)(高|中|低|必需)(?:\s|$)/)?.[1];
+      if (total && self) stars.textContent = `家${total}★ · 本${self}★${tier ? ` · ${tier}` : ""}`;
+      stars.dataset.mobileCompact = "true";
+    });
+    const pageSize = 8;
+    const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+    if (reset) recognitionPage = 0;
+    recognitionPage = Math.min(pageCount - 1, Math.max(0, recognitionPage));
+    const start = recognitionPage * pageSize;
+    items.forEach((item, index) => {
+      item.hidden = index < start || index >= start + pageSize;
+    });
+    let controls = feedback.querySelector(".mobile-recognition-pagination");
+    if (!controls) {
+      controls = document.createElement("div");
+      controls.className = "mobile-recognition-pagination";
+      list.after(controls);
+    }
+    controls.hidden = items.length <= pageSize;
+    controls.innerHTML = `<button type="button" data-recognition-page="previous" ${recognitionPage === 0 ? "disabled" : ""}>上一批</button><span>${recognitionPage + 1} / ${pageCount} · 共 ${items.length} 项</span><button type="button" data-recognition-page="next" ${recognitionPage >= pageCount - 1 ? "disabled" : ""}>下一批</button>`;
+  }
+
   function setFactorHeading(section) {
     const heading = section?.querySelector(".section-head h2");
     const helper = section?.querySelector(".section-head .helper");
@@ -287,7 +322,7 @@
         }
         const total = card.querySelector("[data-total-star-key]")?.value || "1";
         const self = card.querySelector("[data-self-star-key]")?.value || "0";
-        summary.innerHTML = `<span>家系 ${total}★ · 本体 ${self}★</span><b>${tierNames[block.dataset.factorTier] || "高"}</b>`;
+        summary.innerHTML = `<span>家${total}★ · 本${self}★</span><b>${tierNames[block.dataset.factorTier] || "高"}</b>`;
       });
     });
     applyFactorTierFilter(section);
@@ -442,6 +477,7 @@
       if (activeFactorTab) ui.host.dataset.mobileFactorColor = activeFactorTab.dataset.tab;
     }
     updateRecognitionActionBar(ui, factorSection);
+    updateRecognitionPagination(ui);
     if (settingsSection && settingsSection !== resultsSection) {
       settingsSection.dataset.mobileSection = "factors";
       settingsSection.dataset.mobileFactorOrder = "settings";
@@ -692,17 +728,36 @@
       :host([data-mobile-ui="true"]) .recognition-feedback { gap:7px; }
       :host([data-mobile-ui="true"]) .recognition-summary { padding:7px 9px; font-size:11px; }
       :host([data-mobile-ui="true"]) .recognition-tier-note { padding:7px 9px; font-size:10px; line-height:1.45; }
-      :host([data-mobile-ui="true"]) .recognition-list { gap:4px; }
+      :host([data-mobile-ui="true"]) .recognition-list { grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
       :host([data-mobile-ui="true"]) .recognition-item {
-        min-height:54px;
-        grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);
+        min-height:46px;
+        grid-template-columns:minmax(0,1fr);
+        align-content:start;
+        align-items:start;
+        gap:1px;
+        padding:4px 5px;
+        border-radius:8px;
+      }
+      :host([data-mobile-ui="true"]) .recognition-item[hidden] { display:none!important; }
+      :host([data-mobile-ui="true"]) .recognition-name { display:-webkit-box; overflow:hidden; font-size:10px; line-height:1.2; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+      :host([data-mobile-ui="true"]) .recognition-kind { overflow:hidden; font-size:8px; line-height:1.2; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .recognition-stars { overflow:hidden; font-size:8px; line-height:1.2; text-align:left; white-space:nowrap; text-overflow:ellipsis; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-pagination {
+        display:grid;
+        grid-template-columns:1fr auto 1fr;
         align-items:center;
         gap:6px;
-        padding:6px 8px;
+        padding:5px;
+        border:1px solid var(--line);
+        border-radius:11px;
+        color:var(--muted);
+        background:#fff;
+        font-size:9px;
+        text-align:center;
       }
-      :host([data-mobile-ui="true"]) .recognition-name { font-size:11px; }
-      :host([data-mobile-ui="true"]) .recognition-kind { font-size:9px; line-height:1.35; }
-      :host([data-mobile-ui="true"]) .recognition-stars { font-size:9px; line-height:1.4; text-align:right; white-space:normal; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-pagination[hidden] { display:none!important; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-pagination button { min-height:40px; border:0; border-radius:9px; color:var(--brand-dark); background:#eaf7ef; font-size:11px; font-weight:750; }
+      :host([data-mobile-ui="true"]) .mobile-recognition-pagination button:disabled { opacity:.38; }
       :host([data-mobile-ui="true"]) .recognition-issue { padding:7px 9px; font-size:10px; }
       :host([data-mobile-ui="true"]) .recognizer-label { font-size:15px; }
       :host([data-mobile-ui="true"]) .recognizer-helper,
@@ -768,29 +823,29 @@
       }
       :host([data-mobile-ui="true"]) .tier-block.mobile-tier-active { display:block; }
       :host([data-mobile-ui="true"]) .tier-label { display:none; }
-      :host([data-mobile-ui="true"]) .selected-list { min-height:52px; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; padding:0; }
+      :host([data-mobile-ui="true"]) .selected-list { min-height:44px; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; padding:0; }
       :host([data-mobile-ui="true"]) .tier-empty { min-height:42px; }
       :host([data-mobile-ui="true"]) .tier-block.mobile-tier-empty .selected-list { grid-template-columns:1fr; }
       :host([data-mobile-ui="true"]) .selected-card {
         grid-template-columns:minmax(0,1fr) auto;
         grid-template-areas:"identity summary";
         align-items:center;
-        gap:6px;
-        min-height:72px;
-        padding:8px 7px;
+        gap:4px;
+        min-height:44px;
+        padding:4px 5px;
         border-left-width:3px;
-        border-radius:10px;
+        border-radius:8px;
         cursor:pointer;
         touch-action:manipulation;
       }
       :host([data-mobile-ui="true"]) .factor-drag-handle,
       :host([data-mobile-ui="true"]) .compact-factor-field,
       :host([data-mobile-ui="true"]) .tier-field { display:none!important; }
-      :host([data-mobile-ui="true"]) .selected-name { font-size:11px; white-space:normal; line-height:1.3; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-      :host([data-mobile-ui="true"]) .selected-subtype { margin-top:3px; overflow:hidden; font-size:9px; white-space:nowrap; text-overflow:ellipsis; }
-      :host([data-mobile-ui="true"]) .mobile-factor-card-summary { grid-area:summary; display:grid; justify-items:end; gap:4px; }
-      :host([data-mobile-ui="true"]) .mobile-factor-card-summary span { color:var(--muted); font-size:8px; white-space:nowrap; }
-      :host([data-mobile-ui="true"]) .mobile-factor-card-summary b { border-radius:99px; padding:3px 7px; color:var(--factor-color); background:var(--factor-soft); font-size:9px; }
+      :host([data-mobile-ui="true"]) .selected-name { font-size:10px; white-space:normal; line-height:1.25; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+      :host([data-mobile-ui="true"]) .selected-subtype { display:none; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary { grid-area:summary; display:grid; justify-items:end; gap:1px; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary span { color:var(--muted); font-size:7px; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary b { border-radius:99px; padding:1px 5px; color:var(--factor-color); background:var(--factor-soft); font-size:7px; }
       :host([data-mobile-ui="true"]) .mobile-factor-editor-scrim { position:absolute; z-index:8; inset:0; display:none; background:#11291d73; }
       :host([data-mobile-ui="true"]) .mobile-factor-editor {
         position:absolute;
@@ -997,7 +1052,7 @@
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
         :host([data-mobile-ui="true"]) .selected-list { gap:5px; }
-        :host([data-mobile-ui="true"]) .selected-card { min-height:68px; padding-inline:6px; }
+        :host([data-mobile-ui="true"]) .selected-card { min-height:42px; padding-inline:4px; }
         :host([data-mobile-ui="true"]) .factor-description { display:none; }
       }
       @media (max-width:330px) {
@@ -1073,6 +1128,7 @@
       scrollPositions.set(activePage, ui.body.scrollTop);
     }, true);
     ui.root.addEventListener("click", (event) => {
+      if (event.target.closest("#recognize-factor-text")) recognitionPage = 0;
       if (event.target.closest(".mobile-factor-editor-scrim,[data-mobile-editor-close]")) {
         closeFactorEditor(ui);
         return;
@@ -1091,6 +1147,13 @@
       const tierFilter = event.target.closest("[data-mobile-tier-filter]");
       if (tierFilter) {
         applyFactorTierFilter(tierFilter.closest(".section"), tierFilter.dataset.mobileTierFilter);
+        return;
+      }
+      const recognitionPageButton = event.target.closest("[data-recognition-page]");
+      if (recognitionPageButton && !recognitionPageButton.disabled) {
+        recognitionPage += recognitionPageButton.dataset.recognitionPage === "next" ? 1 : -1;
+        updateRecognitionPagination(ui);
+        ui.root.getElementById("recognition-feedback")?.scrollIntoView({ block: "nearest" });
         return;
       }
       const selectedCard = event.target.closest(".selected-card[data-key]");

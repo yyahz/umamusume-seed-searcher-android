@@ -532,8 +532,7 @@
 
   function renderSelectedForColor(colorId) {
     const selected = [...state.selected.values()]
-      .filter((item) => item.colorId === colorId)
-      .filter((item) => colorId !== "white" || item.subtype === state.activeSubtype);
+      .filter((item) => item.colorId === colorId);
     const tiers = colorId === "white" ? [1, 2, 3, ranking.REQUIRED_TIER] : [1, 2, 3];
     return tiers.map((tier) => {
       const entries = selected.filter((item) => Number(item.tier) === tier);
