@@ -2,7 +2,7 @@
 
 “种马搜索器”的独立 Android 轻量版。它在 App 内完成 B 站游戏登录，并提供针对手机屏幕设计的角色、因子和推荐结果界面。
 
-当前版本为 `v0.1.31`，仍处于测试阶段。
+当前版本为 `v0.1.32`，仍处于测试阶段。
 
 ## 功能
 
@@ -19,6 +19,7 @@
 - 结果页依次显示候选的全部蓝红因子、已选绿白因子和其余因子；搜索过程中显示真实查询进度与候选累计数。
 - 支持触摸拖动颜色顺序，并保留上下按钮作为替代操作。
 - 登录结束后的 B 站首页或客户端深链会自动返回工具箱并刷新登录状态。
+- 自动避让状态栏、刘海区域、底部手势条和屏幕键盘，防止系统界面遮挡内容。
 
 因子与技能名称资料参考：[赛马娘WIKI_BWIKI](https://wiki.biligame.com/umamusume/)。
 
@@ -35,7 +36,7 @@
 生成的调试安装包位于：
 
 ```text
-app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.31-debug.apk
+app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.32-debug.apk
 ```
 
 如果本机已安装 Gradle 8.9，也可以运行：
