@@ -861,9 +861,9 @@
     ]);
     const requestedOther = otherColorOrder.flatMap((colorId) => requestedByColor.get(colorId) || []);
     const additionalOther = otherColorOrder.flatMap((colorId) => additionalByColor.get(colorId) || []);
-    const otherFactors = [...requestedOther, ...additionalOther];
-    return `${blueRed.length ? `<div class="result-factor-group base-factors"><div class="factor-chip-list">${blueRed.join("")}</div></div>` : ""}
-      ${otherFactors.length ? `<div class="result-factor-group other-factors"><div class="result-factor-label result-other-heading"><b>其他因子</b><span>${otherFactors.length} 项，全部展示</span></div><div class="factor-chip-list">${otherFactors.join("")}</div></div>` : ""}`;
+    const primaryFactors = [...blueRed, ...requestedOther];
+    return `${primaryFactors.length ? `<div class="result-factor-group base-factors"><div class="factor-chip-list">${primaryFactors.join("")}</div></div>` : ""}
+      ${additionalOther.length ? `<div class="result-factor-group other-factors"><div class="result-factor-label result-other-heading"><b>其他因子</b><span>${additionalOther.length} 项，全部展示</span></div><div class="factor-chip-list">${additionalOther.join("")}</div></div>` : ""}`;
   }
 
   function renderResults() {
@@ -1500,7 +1500,7 @@
     try {
       for (const plan of plans) {
         for (let page = 1; page <= state.depth; page += 1) {
-          state.status = `正在搜索“${plan.label}” · ${Math.min(completed + 1, totalSteps)}/${totalSteps}`;
+          state.status = `正在搜索“${plan.label}” · ${Math.min(completed + 1, totalSteps)}/${totalSteps} · 已收集 ${candidates.size} 位候选`;
           render();
           const requestPayload = {
             filters: plan.filters,

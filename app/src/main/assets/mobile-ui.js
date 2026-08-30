@@ -464,7 +464,15 @@
       empty.dataset.mobileSection = "results";
       ui.body.appendChild(empty);
     }
-    empty.innerHTML = `${ICONS.results}<h2>${awaitingResults ? "正在寻找合适种马" : "还没有推荐结果"}</h2><p>${awaitingResults ? "候选正在汇总和评分，请稍候。" : "先在“因子”中选择条件、确认星级并开始搜索。"}</p>`;
+    const statusText = ui.root.getElementById("status")?.textContent.trim() || "";
+    const progress = awaitingResults ? statusText.match(/(\d+)\/(\d+)/) : null;
+    const current = Number(progress?.[1]) || 0;
+    const total = Number(progress?.[2]) || 0;
+    const percent = total ? Math.max(0, Math.min(100, current / total * 100)) : 0;
+    empty.innerHTML = `${ICONS.results}<h2>${awaitingResults ? "正在寻找合适种马" : "还没有推荐结果"}</h2>${awaitingResults ? `<div class="mobile-search-progress" role="progressbar" aria-label="搜索进度" aria-valuemin="0" aria-valuemax="${total || 1}" aria-valuenow="${current}"><span style="width:${percent}%"></span></div>` : ""}<p data-mobile-result-message></p>`;
+    empty.querySelector("[data-mobile-result-message]").textContent = awaitingResults
+      ? statusText || "正在准备候选查询…"
+      : "先在“因子”中选择条件、确认星级并开始搜索。";
   }
 
   function mapSections(ui) {
@@ -1073,6 +1081,8 @@
         background:#eaf7ef;
       }
       :host([data-mobile-ui="true"]) .mobile-results-empty p { max-width:280px; margin:8px 0 0; color:var(--muted); font-size:14px; line-height:1.6; }
+      :host([data-mobile-ui="true"]) .mobile-search-progress { width:min(280px,82%); height:8px; overflow:hidden; border-radius:99px; background:#dfeae3; }
+      :host([data-mobile-ui="true"]) .mobile-search-progress span { display:block; height:100%; border-radius:inherit; background:var(--brand); transition:width 180ms ease-out; }
       @media (max-width:370px) {
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
@@ -1270,6 +1280,7 @@
         if (!currentUi) return;
         const hasResults = Boolean(currentUi.root.getElementById("results-section"));
         if (hasResults) awaitingResults = false;
+        else if (awaitingResults && currentUi.root.getElementById("status")?.matches(".error,.success")) awaitingResults = false;
         mapSections(currentUi);
         restoreScrollPosition(currentUi, activePage, scrollPositions.get(activePage) || 0);
       });
