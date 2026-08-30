@@ -782,7 +782,7 @@
         align-items:start;
         gap:6px;
       }
-      :host([data-mobile-ui="true"][data-mobile-factor-color="white"]) #factor-catalog { grid-template-columns:1fr; }
+      :host([data-mobile-ui="true"][data-mobile-factor-color="white"]) #factor-catalog { grid-template-columns:repeat(2,minmax(0,1fr)); }
       :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .tier-block,
       :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .mobile-selected-heading { display:none!important; }
       :host([data-mobile-ui="true"]) .mobile-selected-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:16px 0 6px; }
