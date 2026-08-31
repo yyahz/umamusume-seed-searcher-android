@@ -12,3 +12,4 @@ app/build/
 *.aab
 captures/
 .update-*.png
+media/feature-intro/
