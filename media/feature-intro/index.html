@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>种马搜索器 · 功能介绍</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      color: #f4fbf7;
+      background: #10231a;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+    .viewport { position: fixed; inset: 0; overflow: hidden; }
+    .deck {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1600px;
+      height: 900px;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #f6faf7;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .34);
+      transform-origin: center center;
+    }
+    iframe { position: absolute; inset: 0; width: 1600px; height: 900px; border: 0; opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+    iframe.active { opacity: 1; pointer-events: auto; }
+    .controls {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      background: rgba(8, 25, 17, .84);
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+      transform: translateX(-50%);
+      backdrop-filter: blur(12px);
+    }
+    button {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      color: #fff;
+      background: #087f4f;
+      font-size: 21px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .35; cursor: default; }
+    .dots { display: flex; gap: 7px; padding: 0 3px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); }
+    .dot.active { width: 19px; border-radius: 999px; background: #65d39c; }
+    .hint { position: fixed; right: 22px; bottom: 22px; color: rgba(255,255,255,.64); font-size: 12px; }
+    @media (prefers-reduced-motion: reduce) { iframe { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="viewport" aria-label="种马搜索器三页功能介绍">
+    <section class="deck" id="deck">
+      <iframe class="active" src="01-gold-to-white.html" title="第1页：金技能识别下位白技能"></iframe>
+      <iframe src="02-traditional-to-simplified.html" title="第2页：繁中技能自动转换简中"></iframe>
+      <iframe src="03-guide-recognition.html" title="第3页：攻略技能清单智能识别"></iframe>
+    </section>
+  </main>
+  <nav class="controls" aria-label="幻灯片翻页">
+    <button id="prev" type="button" aria-label="上一页">‹</button>
+    <div class="dots" aria-hidden="true"><span class="dot active"></span><span class="dot"></span><span class="dot"></span></div>
+    <button id="next" type="button" aria-label="下一页">›</button>
+  </nav>
+  <div class="hint">可使用键盘 ← → 翻页</div>
+  <script>
+    const slides = [...document.querySelectorAll('iframe')];
+    const dots = [...document.querySelectorAll('.dot')];
+    const deck = document.getElementById('deck');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    let current = 0;
+
+    function resizeDeck() {
+      const scale = Math.min((innerWidth - 36) / 1600, (innerHeight - 36) / 900);
+      deck.style.transform = `translate(-50%, -50%) scale(${Math.max(.1, scale)})`;
+    }
+
+    function show(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === current));
+      prev.disabled = current === 0;
+      next.disabled = current === slides.length - 1;
+    }
+
+    prev.addEventListener('click', () => show(current - 1));
+    next.addEventListener('click', () => show(current + 1));
+    addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft' || event.key === 'PageUp') show(current - 1);
+      if (event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' ') show(current + 1);
+      if (event.key === 'Home') show(0);
+      if (event.key === 'End') show(slides.length - 1);
+    });
+    addEventListener('resize', resizeDeck);
+    resizeDeck();
+    show(0);
+  </script>
+</body>
+</html>
