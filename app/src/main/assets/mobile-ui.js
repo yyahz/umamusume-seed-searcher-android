@@ -17,7 +17,7 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.45";
+  const APP_VERSION = "0.1.46";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
@@ -1058,11 +1058,19 @@
       :host([data-mobile-ui="true"]) .result-count { font-size:10px; }
       :host([data-mobile-ui="true"]) .results-rerun { min-height:34px; padding-inline:9px; }
       :host([data-mobile-ui="true"]) .result-card { border:0; border-radius:16px; box-shadow:inset 0 0 0 1px var(--line); }
-      :host([data-mobile-ui="true"]) .result-top { grid-template-columns:92px minmax(0,1fr) auto; gap:8px; padding:10px; }
-      :host([data-mobile-ui="true"]) .hero-family { width:92px; height:60px; grid-template-columns:60px 28px; gap:4px; }
-      :host([data-mobile-ui="true"]) .hero-family .hero-image { width:60px; height:60px; border-radius:15px; }
-      :host([data-mobile-ui="true"]) .parent-images { height:60px; grid-template-rows:repeat(2,28px); gap:4px; }
-      :host([data-mobile-ui="true"]) .parent-image { width:28px; height:28px; border-radius:8px; }
+      :host([data-mobile-ui="true"]) .result-top {
+        --result-main-avatar:60px;
+        --result-parent-avatar:28px;
+        --result-avatar-gap:4px;
+        --result-parent-gap:4px;
+        grid-template-columns:calc(var(--result-main-avatar) + var(--result-parent-avatar) + var(--result-avatar-gap)) minmax(0,1fr) auto;
+        gap:8px;
+        padding:10px;
+      }
+      :host([data-mobile-ui="true"]) .hero-family { width:calc(var(--result-main-avatar) + var(--result-parent-avatar) + var(--result-avatar-gap)); height:var(--result-main-avatar); grid-template-columns:var(--result-main-avatar) var(--result-parent-avatar); gap:var(--result-avatar-gap); }
+      :host([data-mobile-ui="true"]) .hero-family .hero-image { width:var(--result-main-avatar); height:var(--result-main-avatar); border-radius:15px; }
+      :host([data-mobile-ui="true"]) .parent-images { height:var(--result-main-avatar); grid-template-rows:repeat(2,var(--result-parent-avatar)); gap:var(--result-parent-gap); }
+      :host([data-mobile-ui="true"]) .parent-image { width:var(--result-parent-avatar); height:var(--result-parent-avatar); border-radius:8px; }
       :host([data-mobile-ui="true"]) .result-rank { left:-4px; top:-5px; height:22px; min-width:26px; font-size:9px; }
       :host([data-mobile-ui="true"]) .result-name { font-size:14px; line-height:1.25; }
       :host([data-mobile-ui="true"]) .result-meta { margin-top:2px; white-space:normal; font-size:10px; line-height:1.35; }
@@ -1234,6 +1242,24 @@
       :host([data-mobile-ui="true"]) .mobile-statement-list b { font-size:13px; }
       :host([data-mobile-ui="true"]) .mobile-statement-list small { overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
       :host([data-mobile-ui="true"]) .mobile-statement-list strong { flex:0 0 auto; color:var(--brand-dark); font-size:12px; }
+      @media (min-width:600px) and (min-height:600px) {
+        :host([data-mobile-ui="true"]) .result-top {
+          --result-main-avatar:80px;
+          --result-parent-avatar:38px;
+          --result-parent-gap:4px;
+        }
+        :host([data-mobile-ui="true"]) .hero-family .hero-image { border-radius:18px; }
+        :host([data-mobile-ui="true"]) .parent-image { border-radius:10px; }
+      }
+      @media (min-width:840px) and (min-height:720px) {
+        :host([data-mobile-ui="true"]) .result-top {
+          --result-main-avatar:96px;
+          --result-parent-avatar:46px;
+          --result-parent-gap:4px;
+        }
+        :host([data-mobile-ui="true"]) .hero-family .hero-image { border-radius:21px; }
+        :host([data-mobile-ui="true"]) .parent-image { border-radius:12px; }
+      }
       @media (max-width:370px) {
         :host([data-mobile-ui="true"]) .panel-body { padding-inline:9px; }
         :host([data-mobile-ui="true"]) .section { padding:14px; border-radius:18px; }
