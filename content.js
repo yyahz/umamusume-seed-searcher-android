@@ -404,8 +404,12 @@
       .results-rerun { min-height:36px; border:1px solid var(--line); border-radius:10px; padding:0 10px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; }
       .result-list { display:grid; gap:10px; }
       .result-card { overflow:hidden; border:1px solid var(--line); border-radius:16px; background:#fff; }
-      .result-top { display:grid; grid-template-columns:58px minmax(0,1fr) auto; align-items:center; gap:10px; padding:12px; }
+      .result-top { display:grid; grid-template-columns:127px minmax(0,1fr) auto; align-items:center; gap:10px; padding:12px; }
+      .hero-family { width:127px; height:88px; display:grid; grid-template-columns:80px 42px; align-items:center; gap:5px; }
       .hero-image { width:58px; height:58px; object-fit:cover; border:1px solid var(--line); border-radius:14px; background:#eef2ed; }
+      .hero-family .hero-image { width:80px; height:80px; border-radius:18px; }
+      .parent-images { height:88px; display:grid; grid-template-rows:repeat(2,42px); gap:4px; }
+      .parent-image { width:42px; height:42px; object-fit:cover; border:1px solid var(--line); border-radius:11px; background:#eef2ed; }
       .result-identity { min-width:0; }
       .result-name { font-weight:800; overflow-wrap:anywhere; }
       .result-meta { margin-top:4px; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
@@ -929,11 +933,19 @@
             item.requiredRequestedCount ? `必需达标 ${item.requiredSatisfiedCount}/${item.requiredRequestedCount}` : ""
           ].filter(Boolean).join(" · ");
           const image = hero.icon_url || "";
+          const parentImages = [hero.icon_url_f || "", hero.icon_url_m || ""];
           const totalShortfallCount = item.matches.filter((match) => !match.meetsTotalThreshold).length;
           const selfShortfallCount = item.matches.filter((match) => !match.meetsSelfThreshold).length;
           return `<article class="result-card">
             <div class="result-top">
-              <div class="hero-wrap">${image ? `<img class="hero-image" src="${escapeHtml(image)}" alt="${escapeHtml(displayName)}头像" loading="lazy">` : '<div class="hero-image" aria-hidden="true"></div>'}<span class="result-rank">#${index + 1}</span></div>
+              <div class="hero-wrap hero-family">
+                ${image ? `<img class="hero-image" src="${escapeHtml(image)}" alt="${escapeHtml(displayName)}头像" loading="lazy">` : '<div class="hero-image" aria-hidden="true"></div>'}
+                <div class="parent-images">${parentImages.map((parentImage, parentIndex) => parentImage
+                  ? `<img class="parent-image" src="${escapeHtml(parentImage)}" alt="父辈${parentIndex + 1}头像" loading="lazy">`
+                  : '<div class="parent-image" aria-hidden="true"></div>'
+                ).join("")}</div>
+                <span class="result-rank">#${index + 1}</span>
+              </div>
               <div class="result-identity"><div class="result-name">${escapeHtml(displayName)}</div><div class="result-meta-row"><div class="result-meta">${escapeHtml(resultMeta)}</div><button class="result-copy" type="button" data-copy-id="${escapeHtml(id)}" aria-label="复制好友 ID ${escapeHtml(id)}">${ICONS.copy}<span>复制</span></button></div></div>
               <div class="score"><div class="score-value">${item.score.toFixed(1)}</div><div class="score-label">综合匹配</div></div>
             </div>
