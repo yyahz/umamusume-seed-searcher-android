@@ -214,7 +214,7 @@
           type: Number(factor.type),
           num: factor.num,
           name: String(factor.name || factor.num),
-          tier: ranking.clampTier(factor.tier, 2, [4, 5, 6].includes(Number(factor.type))),
+          tier: ranking.clampTier(factor.tier, 2, true),
           minStars: ranking.clampFactorStars(factor.minStars),
           minSelfStars: ranking.clampSelfStars(factor.minSelfStars),
           colorId: factor.colorId,
@@ -572,13 +572,13 @@
   function renderSelectedForColor(colorId) {
     const selected = [...state.selected.values()]
       .filter((item) => item.colorId === colorId);
-    const tiers = colorId === "white" ? [1, 2, 3, ranking.REQUIRED_TIER] : [1, 2, 3];
+    const tiers = [1, 2, 3, ranking.REQUIRED_TIER];
     return tiers.map((tier) => {
       const entries = selected.filter((item) => Number(item.tier) === tier);
       const required = tier === ranking.REQUIRED_TIER;
       const tierName = required ? "必须双门槛达标" : "优先级";
       const tierLabel = required ? "必需" : ["高", "中", "低"][tier - 1];
-      const tierOptions = [1, 2, 3, ...(colorId === "white" ? [ranking.REQUIRED_TIER] : [])];
+      const tierOptions = [1, 2, 3, ranking.REQUIRED_TIER];
       return `
         <div class="tier-block ${required ? "required-tier" : ""}" data-factor-tier="${tier}">
           <div class="tier-label"><span class="tier-dot" style="--tier-opacity:${required ? 1 : 1 - (tier - 1) * .28}"></span><b>${tierLabel}</b>${tierName}<span class="tier-help">拖动因子到此处</span></div>
@@ -756,12 +756,12 @@
     const totalNote = item.explicitTotal ? "" : current ? " 保留当前" : " 默认";
     const selfNote = item.explicitSelf ? "" : current ? " 保留当前" : " 默认";
     const plannedTier = current
-      ? ranking.clampTier(current.tier, 1, factor.colorId === "white")
+      ? ranking.clampTier(current.tier, 1, true)
       : tierByKey.get(key) ?? 1;
     const tierNote = current ? " 保留当前" : " 本轮预排";
     return `<div class="recognition-item" style="--factor-color:${meta.color};--factor-soft:${meta.soft}" title="${escapeHtml(item.sourceText || factor.name)}">
       <div><div class="recognition-name">${escapeHtml(factor.name)}</div><div class="recognition-kind">${escapeHtml(selectedFactorSubtitle(factor))} · ${recognitionMatchLabel(item.matchKind)}</div></div>
-      <div class="recognition-stars">家系 ${totalStars}★${totalNote} · 本体 ${selfStars}★${selfNote} · ${["高", "中", "低"][plannedTier - 1]}${tierNote}</div>
+      <div class="recognition-stars">家系 ${totalStars}★${totalNote} · 本体 ${selfStars}★${selfNote} · ${plannedTier === ranking.REQUIRED_TIER ? "必需" : ["高", "中", "低"][plannedTier - 1]}${tierNote}</div>
     </div>`;
   }
 
@@ -978,7 +978,7 @@
         <ol class="priority-list" id="priority-list">${renderColorOrder()}</ol>
       </section>
       <section class="section">
-        <div class="section-head"><div><h2>3. 选择具体因子、双星级与优先级</h2><p class="helper">星级均为最低门槛；本体 0★ 表示本体可以没有该因子。蓝、红因子未同时达到家系与本体门槛时得 0 分；白因子可设为“必需”（100权重）。</p></div><div class="section-head-actions"><span class="badge" style="--factor-color:${activeMeta.color};--factor-soft:${activeMeta.soft}">${selectedCount} 项</span>${selectedCount || hasRecognitionWork ? '<button class="reset-factors" id="reset-factors" type="button">清空</button>' : ""}</div></div>
+        <div class="section-head"><div><h2>3. 选择具体因子、双星级与优先级</h2><p class="helper">星级均为最低门槛；本体 0★ 表示本体可以没有该因子。蓝、红因子未同时达到家系与本体门槛时得 0 分；四类因子均可设为“必需”，未达双门槛时不算合格。</p></div><div class="section-head-actions"><span class="badge" style="--factor-color:${activeMeta.color};--factor-soft:${activeMeta.soft}">${selectedCount} 项</span>${selectedCount || hasRecognitionWork ? '<button class="reset-factors" id="reset-factors" type="button">清空</button>' : ""}</div></div>
         ${state.loadingFactors ? '<div class="loading-line" aria-label="正在加载因子目录"></div>' : renderConfigurator()}
       </section>
       <section class="section">
@@ -1209,7 +1209,7 @@
       const next = {
         ...factor,
         tier: current
-          ? ranking.clampTier(current.tier, 1, factor.colorId === "white")
+          ? ranking.clampTier(current.tier, 1, true)
           : tierByKey.get(key) ?? 1,
         minStars: item.explicitTotal
           ? ranking.clampFactorStars(item.minStars)
@@ -1335,7 +1335,7 @@
         const item = state.selected.get(key);
         clearActiveBlocks();
         if (!item) return;
-        const nextTier = ranking.clampTier(block.dataset.factorTier, item.tier, item.colorId === "white");
+        const nextTier = ranking.clampTier(block.dataset.factorTier, item.tier, true);
         if (item.tier === nextTier) return;
         invalidateFactorImportUndo();
         item.tier = nextTier;
@@ -1484,7 +1484,7 @@
       const item = state.selected.get(select.dataset.tierKey);
       if (!item) return;
       invalidateFactorImportUndo();
-      item.tier = ranking.clampTier(select.value, item.tier, item.colorId === "white");
+      item.tier = ranking.clampTier(select.value, item.tier, true);
       state.selected.set(select.dataset.tierKey, item);
       savePreferences();
       render();
@@ -1636,7 +1636,7 @@
     invalidateFactorImportUndo();
     item.minStars = ranking.clampFactorStars(event.detail?.minStars);
     item.minSelfStars = ranking.clampSelfStars(event.detail?.minSelfStars);
-    item.tier = ranking.clampTier(event.detail?.tier, item.tier, item.colorId === "white");
+    item.tier = ranking.clampTier(event.detail?.tier, item.tier, true);
     state.selected.set(key, item);
     savePreferences();
     render();
