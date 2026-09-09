@@ -17,7 +17,7 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.49";
+  const APP_VERSION = "0.1.50";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
@@ -574,6 +574,13 @@
     } else {
       updateCheck = { state: "current", message: "当前已是最新版本", latest, url: "" };
     }
+    ensureAppSettingsSection(findUi());
+  };
+
+  globalThis.__umaSeedCachedUpdate = (version) => {
+    // A late disk-check callback must not replace a newer user-initiated check.
+    if (updateCheck.state !== "idle" || compareVersions(version, APP_VERSION) <= 0) return;
+    updateCheck = { state: "available", message: `v${version} 已下载，可直接安装`, latest: version, url: releaseApkUrl(version) };
     ensureAppSettingsSection(findUi());
   };
 
@@ -1590,6 +1597,7 @@
     });
     observer.observe(ui.body, { childList: true });
     mapSections(ui);
+    globalThis.UmaSeedApp?.restoreDownloadedUpdate?.();
   }
 
   install();

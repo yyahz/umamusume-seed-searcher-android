@@ -2,6 +2,7 @@ package io.github.yyahz.umaseedsearcher;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
@@ -14,6 +15,15 @@ import java.io.FileNotFoundException;
 public final class UpdateFileProvider extends ContentProvider {
     static final String FILE_NAME = "uma-seed-searcher-update.apk";
     static final String CONTENT_PATH = "/update.apk";
+
+    static File savedUpdateFile(Context context) {
+        return new File(context.getNoBackupFilesDir(), FILE_NAME);
+    }
+
+    static File availableUpdateFile(Context context) {
+        File saved = savedUpdateFile(context);
+        return saved.isFile() ? saved : new File(context.getCacheDir(), FILE_NAME);
+    }
 
     @Override
     public boolean onCreate() {
@@ -30,7 +40,7 @@ public final class UpdateFileProvider extends ContentProvider {
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
         requireUpdatePath(uri);
         if (!"r".equals(mode)) throw new FileNotFoundException("Read-only update file");
-        File file = new File(getContext().getCacheDir(), FILE_NAME);
+        File file = availableUpdateFile(getContext());
         if (!file.isFile()) throw new FileNotFoundException("Update file is unavailable");
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
     }
@@ -38,7 +48,7 @@ public final class UpdateFileProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         requireUpdatePath(uri);
-        File file = new File(getContext().getCacheDir(), FILE_NAME);
+        File file = availableUpdateFile(getContext());
         MatrixCursor cursor = new MatrixCursor(new String[] { OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE });
         cursor.addRow(new Object[] { FILE_NAME, file.isFile() ? file.length() : 0L });
         return cursor;

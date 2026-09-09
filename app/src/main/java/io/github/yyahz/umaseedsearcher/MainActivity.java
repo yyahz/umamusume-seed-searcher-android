@@ -424,18 +424,53 @@ public final class MainActivity extends Activity {
         public void installUpdate(String version) {
             downloadAndInstallUpdate(version);
         }
+
+        @JavascriptInterface
+        public void restoreDownloadedUpdate() {
+            new Thread(() -> restoreSavedUpdate(), "uma-update-restore").start();
+        }
     }
 
-    private void downloadAndInstallUpdate(String version) {
+    private synchronized void restoreSavedUpdate() {
+        if (updateDownloadInProgress) return;
+        File file = UpdateFileProvider.availableUpdateFile(this);
+        if (!file.isFile()) return;
+        try {
+            PackageInfo archive = getPackageManager().getPackageArchiveInfo(file.getAbsolutePath(), 0);
+            if (archive == null) throw new IOException("Invalid saved package");
+            verifyUpdatePackage(file, archive.versionName);
+            String script = "globalThis.__umaSeedCachedUpdate&&globalThis.__umaSeedCachedUpdate("
+                + quoteJs(archive.versionName) + ");";
+            handler.post(() -> webView.evaluateJavascript(script, ignored -> { }));
+        } catch (Exception error) {
+            // Only the updater's fixed private APK is removed, never user files.
+            file.delete();
+        }
+    }
+
+    private synchronized void downloadAndInstallUpdate(String version) {
         String normalizedVersion = String.valueOf(version).replaceFirst("^[vV]", "");
         if (!normalizedVersion.matches("\\d+\\.\\d+\\.\\d+") || updateDownloadInProgress) return;
         updateDownloadInProgress = true;
-        notifyUpdateStatus("downloading", "正在下载新版… 0%");
+        notifyUpdateStatus("downloading", "正在检查本地安装包…");
         new Thread(() -> {
-            File temporary = new File(getCacheDir(), UpdateFileProvider.FILE_NAME + ".download");
-            File updateFile = new File(getCacheDir(), UpdateFileProvider.FILE_NAME);
+            File temporary = new File(getNoBackupFilesDir(), UpdateFileProvider.FILE_NAME + ".download");
+            File updateFile = UpdateFileProvider.savedUpdateFile(this);
             HttpURLConnection connection = null;
             try {
+                File saved = UpdateFileProvider.availableUpdateFile(this);
+                if (saved.isFile()) {
+                    try {
+                        verifyUpdatePackage(saved, normalizedVersion);
+                        pendingUpdateFile = saved;
+                        notifyUpdateStatus("ready", "安装包已下载，正在打开系统安装器…");
+                        handler.post(this::requestUpdateInstall);
+                        return;
+                    } catch (Exception invalidOrDifferentVersion) {
+                        // Keep the previous package until a replacement is fully verified.
+                    }
+                }
+                notifyUpdateStatus("downloading", "正在下载新版… 0%");
                 URL releaseUrl = new URL(
                     "https://raw.githubusercontent.com/yyahz/umamusume-seed-searcher-android/main/"
                         + "downloads/uma-seed-searcher-android-latest.apk?version=" + normalizedVersion
@@ -462,18 +497,18 @@ public final class MainActivity extends Activity {
                     }
                 }
                 if (downloaded <= 0) throw new IOException("Empty update package");
+                if (expected > 0 && downloaded != expected) throw new IOException("Incomplete update package");
+                verifyUpdatePackage(temporary, normalizedVersion);
                 if (updateFile.exists() && !updateFile.delete()) throw new IOException("Cannot replace update package");
                 if (!temporary.renameTo(updateFile)) throw new IOException("Cannot finalize update package");
-                verifyUpdatePackage(updateFile, normalizedVersion);
                 pendingUpdateFile = updateFile;
                 notifyUpdateStatus("ready", "下载完成，正在打开系统安装器…");
                 handler.post(this::requestUpdateInstall);
             } catch (Exception error) {
                 temporary.delete();
-                updateFile.delete();
                 notifyUpdateStatus("error", "下载失败，请检查网络");
             } finally {
-                updateDownloadInProgress = false;
+                synchronized (MainActivity.this) { updateDownloadInProgress = false; }
                 if (connection != null) connection.disconnect();
             }
         }, "uma-update-download").start();
@@ -520,6 +555,11 @@ public final class MainActivity extends Activity {
             : PackageManager.GET_SIGNATURES;
         PackageInfo archive = packageManager.getPackageArchiveInfo(file.getAbsolutePath(), flags);
         PackageInfo installed = packageManager.getPackageInfo(getPackageName(), flags);
+        // Some Android variants omit archive signingInfo for the modern flag.
+        // Retry the legacy certificate API, but still require matching nonempty certificates.
+        if (archive != null && signaturesOf(archive).length == 0) {
+            archive = packageManager.getPackageArchiveInfo(file.getAbsolutePath(), PackageManager.GET_SIGNATURES);
+        }
         if (archive == null || !getPackageName().equals(archive.packageName)) {
             throw new IOException("Unexpected package name");
         }
