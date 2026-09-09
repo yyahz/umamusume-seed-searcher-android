@@ -927,16 +927,15 @@
           const heroName = String(hero.name || hero.card_name || "").trim();
           const displayName = heroName || `ID ${id}`;
           const resultMeta = [
-            heroName ? `ID ${id}` : "",
             `${Number(hero.win_race_count || 0)} 胜`,
-            `双门槛达标 ${item.satisfiedCount}/${item.requestedCount}`,
-            item.requiredRequestedCount ? `必需达标 ${item.requiredSatisfiedCount}/${item.requiredRequestedCount}` : ""
+            `因子达标 ${item.satisfiedCount}/${item.requestedCount}`
           ].filter(Boolean).join(" · ");
+          const requiredMissing = Math.max(0, item.requiredRequestedCount - item.requiredSatisfiedCount);
           const image = hero.icon_url || "";
           const parentImages = [hero.icon_url_f || "", hero.icon_url_m || ""];
           const totalShortfallCount = item.matches.filter((match) => !match.meetsTotalThreshold).length;
           const selfShortfallCount = item.matches.filter((match) => !match.meetsSelfThreshold).length;
-          return `<article class="result-card">
+          return `<article class="result-card" data-required-state="${requiredMissing ? "unmet" : item.requiredRequestedCount ? "met" : "none"}">
             <div class="result-top">
               <div class="hero-wrap hero-family">
                 ${image ? `<img class="hero-image" src="${escapeHtml(image)}" alt="${escapeHtml(displayName)}头像" loading="lazy">` : '<div class="hero-image" aria-hidden="true"></div>'}
@@ -946,8 +945,8 @@
                 ).join("")}</div>
                 <span class="result-rank">#${index + 1}</span>
               </div>
-              <div class="result-identity"><div class="result-name">${escapeHtml(displayName)}</div><div class="result-meta-row"><div class="result-meta">${escapeHtml(resultMeta)}</div><button class="result-copy" type="button" data-copy-id="${escapeHtml(id)}" aria-label="复制好友 ID ${escapeHtml(id)}">${ICONS.copy}<span>复制</span></button></div></div>
-              <div class="score"><div class="score-value">${item.score.toFixed(1)}</div><div class="score-label">综合匹配</div></div>
+              <div class="result-identity"><div class="result-id">ID ${escapeHtml(id)}</div><div class="result-meta">${escapeHtml(resultMeta)}</div>${item.requiredRequestedCount ? `<div class="result-required">${requiredMissing ? `必需未达标 · ${requiredMissing} 项` : "必需因子已达标"}</div>` : ""}</div>
+              <div class="score"><div class="score-value">${item.score.toFixed(1)}</div><div class="score-label">综合匹配</div><button class="result-copy" type="button" data-copy-id="${escapeHtml(id)}" aria-label="复制好友 ID ${escapeHtml(id)}">${ICONS.copy}<span>复制 ID</span></button></div>
             </div>
             <div class="score-track" role="progressbar" aria-label="综合匹配" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${item.score.toFixed(1)}"><div class="score-fill" style="width:${Math.max(0, Math.min(100, item.score))}%"></div></div>
             <div class="breakdown">${renderBreakdown(item)}</div>

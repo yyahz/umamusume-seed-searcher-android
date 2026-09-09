@@ -17,7 +17,7 @@
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.48";
+  const APP_VERSION = "0.1.49";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
@@ -295,7 +295,7 @@
     if (!heading) {
       heading = document.createElement("div");
       heading.className = "mobile-selected-heading";
-      heading.innerHTML = '<div><h3>已选因子设置</h3><p>按优先级查看，点击因子卡修改。</p></div><div class="mobile-selected-actions"></div>';
+      heading.innerHTML = '<div><h3>已选因子</h3></div><div class="mobile-selected-actions"></div>';
       firstTier.before(heading);
     }
     const reset = section.querySelector("#reset-factors");
@@ -318,6 +318,8 @@
     }).join("");
     blocks.forEach((block) => {
       block.classList.toggle("mobile-tier-empty", Boolean(block.querySelector(".tier-empty")));
+      const empty = block.querySelector(".tier-empty");
+      if (empty) empty.textContent = `暂无${tierNames[block.dataset.factorTier] || "该优先级"}因子`;
       block.querySelectorAll(".selected-card").forEach((card) => {
         card.draggable = false;
         card.setAttribute("role", "button");
@@ -401,6 +403,7 @@
     const editor = ui?.panel.querySelector(".mobile-factor-editor");
     const key = editor?.dataset.factorKey;
     if (!key) return;
+    activeFactorTier = editor.dataset.mobileEditorTier || activeFactorTier;
     ui.root.dispatchEvent(new CustomEvent("uma-seed-update-factor", {
       detail: {
         key,
@@ -671,17 +674,31 @@
 
     const style = document.createElement("style");
     style.id = "uma-mobile-ui-style";
+    // Official umamusume.jp svg.teitetsu path, unchanged. Third-party artwork,
+    // excluded from MIT; see THIRD_PARTY_NOTICES.md for source and rights status.
+    const officialHorseshoePath = "M100.7 94.6c-2.4-2.1-7-3.9-4.4-7.8 18.8-27.1 10.9-70.4-22.4-81.6C67.5 2.9 60.7 1.8 54 1.8S40.4 3 34.1 5.2C.7 16.5-7.1 59.8 11.7 86.8c2.6 3.8-2 5.7-4.4 7.8-1.6 1.3-1.8 3.5-.5 5 2.8 3.2 5.7 6.4 8.6 9.5 1.4 1.7 3.6 1.2 5.1 0 7.1-4.7 14.1-9.4 21.2-14.1.8-.5 1.3-1.2 1.5-2.1.3-1.3 0-2.4-1.1-3.3-3.1-2.9-5.5-6.2-7.3-10.1-3.9-8.8-5-20.5-2-29.7 3.1-9.9 11.8-15.3 21.2-15.3s18.1 5.4 21.2 15.3c2.9 9.2 1.9 20.9-2 29.7-1.8 3.8-4.2 7.2-7.3 10.1-1 .9-1.4 2-1.1 3.3.2.9.7 1.6 1.5 2.1 7.1 4.7 14.1 9.4 21.2 14.1 1.5 1.2 3.7 1.6 5.1 0 2.9-3.2 5.7-6.3 8.6-9.5 1.4-1.5 1.1-3.7-.5-5";
+    const horseshoeDecoration = "data:image/svg+xml," + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="420" viewBox="0 0 360 420"><defs><path id="shoe" d="${officialHorseshoePath}"/></defs><g opacity=".30">${[
+        [22,28,.20,-25,"#e78dbd"],[178,75,.15,18,"#80bfe5"],
+        [338,135,.22,155,"#a7cf73"],[85,190,.16,-15,"#c3a0e1"],
+        [245,242,.23,205,"#efc35f"],[14,292,.17,28,"#70cbb7"],
+        [140,357,.21,165,"#e899b6"],[321,390,.15,-32,"#8fa7ed"]
+      ].map(([x,y,scale,angle,color]) => `<use href="#shoe" fill="${color}" transform="translate(${x} ${y}) rotate(${angle}) scale(${scale}) translate(-54 -56)"/>`).join("")}</g></svg>`
+    );
+    const facetBackground = "data:image/svg+xml," + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="760" viewBox="0 0 600 760"><rect width="600" height="760" fill="#fcfbff"/><g opacity=".6"><path d="M0 0L220 120 35 300Z" fill="#f8ddeb"/><path d="M600 0L390 170 520 365 600 330Z" fill="#d9effb"/><path d="M0 510L235 390 160 690Z" fill="#e1f1cf"/><path d="M600 515L395 590 540 760 600 760Z" fill="#fff0bf"/><path d="M220 120L380 0 390 170Z" fill="#e9e0f8"/><path d="M35 300L235 390 0 510Z" fill="#ddf2ec"/><path d="M235 390L520 365 395 590Z" fill="#f8e0eb"/><path d="M160 690L395 590 300 760Z" fill="#e0e8fc"/></g></svg>'
+    );
     style.textContent = `
       :host([data-mobile-ui="true"]) {
         --mobile-nav-height:64px;
         --mobile-action-height:68px;
         --surface:#fff;
-        --surface-2:#f4f7f5;
-        --ink:#17241d;
-        --muted:#607067;
-        --line:#e2e9e4;
-        --brand:#16a064;
-        --brand-dark:#087445;
+        --surface-2:#f8f7ff;
+        --ink:#29324a;
+        --muted:#667087;
+        --line:#e2e3ee;
+        --brand:#315cff;
+        --brand-dark:#2347c4;
       }
       :host([data-mobile-ui="true"]) .launcher,
       :host([data-mobile-ui="true"]) .scrim { display:none!important; }
@@ -925,6 +942,7 @@
       }
       :host([data-mobile-ui="true"][data-mobile-factor-color="white"]) #factor-catalog { grid-template-columns:repeat(2,minmax(0,1fr)); }
       :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .tier-block,
+      :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .mobile-tier-tabs,
       :host([data-mobile-ui="true"][data-mobile-has-factors="false"]) .mobile-selected-heading { display:none!important; }
       :host([data-mobile-ui="true"]) .mobile-selected-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:16px 0 6px; }
       :host([data-mobile-ui="true"]) .mobile-selected-heading h3 { margin:0; font-size:17px; line-height:1.4; }
@@ -1224,13 +1242,15 @@
       :host([data-mobile-ui="true"]) .mobile-update-copy { min-width:0; display:grid; gap:2px; }
       :host([data-mobile-ui="true"]) .mobile-update-copy b { font-size:14px; }
       :host([data-mobile-ui="true"]) .mobile-update-copy span { color:var(--muted); font-size:11px; }
-      :host([data-mobile-ui="true"]) [data-mobile-check-update] { min-height:44px; border:0; border-radius:11px; padding:0 11px; color:var(--brand-dark); background:#eaf7ef; font-size:11px; font-weight:800; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) [data-mobile-check-update],
+      :host([data-mobile-ui="true"]) .mobile-update-install { box-sizing:border-box; flex:0 0 auto; width:76px; min-width:76px; min-height:44px; border:0; border-radius:11px; padding:10px 11px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; line-height:1.4; font-weight:800; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) [data-mobile-check-update] { color:var(--brand-dark); background:#eaf7ef; }
       :host([data-mobile-ui="true"]) [data-mobile-check-update]:disabled { opacity:.55; }
       :host([data-mobile-ui="true"]) .mobile-update-footer { grid-column:2 / -1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:10px; }
       :host([data-mobile-ui="true"]) .mobile-update-status { min-width:0; margin:0; color:var(--muted); font-size:11px; line-height:1.35; }
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="available"] { color:var(--brand-dark); font-weight:750; }
       :host([data-mobile-ui="true"]) .mobile-update-status[data-update-state="error"] { color:var(--danger); }
-      :host([data-mobile-ui="true"]) .mobile-update-install { flex:0 0 auto; min-height:44px; border:0; border-radius:11px; padding:0 14px; color:#fff; background:var(--brand); box-shadow:0 3px 9px #0d784824; font-size:11px; font-weight:800; white-space:nowrap; }
+      :host([data-mobile-ui="true"]) .mobile-update-install { color:#fff; background:var(--brand); }
       :host([data-mobile-ui="true"]) .mobile-update-install:disabled { opacity:.58; }
       :host([data-mobile-ui="true"]) .mobile-project-link { min-height:48px; display:flex; align-items:center; justify-content:center; margin-top:10px; border:1px solid var(--line); border-radius:13px; color:var(--brand-dark); background:#fff; font-size:12px; font-weight:750; text-decoration:none; }
       :host([data-mobile-ui="true"]) .mobile-data-statement { padding:16px; }
@@ -1242,6 +1262,103 @@
       :host([data-mobile-ui="true"]) .mobile-statement-list b { font-size:13px; }
       :host([data-mobile-ui="true"]) .mobile-statement-list small { overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
       :host([data-mobile-ui="true"]) .mobile-statement-list strong { flex:0 0 auto; color:var(--brand-dark); font-size:12px; }
+      /* Local GUI trial: readable compact cards and adaptive content density. */
+      /* Official-site-inspired local trial. Decorations never receive pointer input. */
+      :host([data-mobile-ui="true"]) .panel {
+        background-color:var(--surface-2);
+        background-image:url("${horseshoeDecoration}"),url("${facetBackground}");
+        background-size:360px 420px,600px 760px;
+        background-position:center top,center top;
+        background-repeat:repeat,repeat;
+      }
+      :host([data-mobile-ui="true"]) .panel-header {
+        background:linear-gradient(115deg,#fff6fa,#fff 48%,#eef8ff);
+        border-bottom:3px solid transparent;
+        border-image:linear-gradient(90deg,#ee78b7,#af97ec,#71bcec,#8fcd8a,#f2d478) 1;
+      }
+      :host([data-mobile-ui="true"]) .mobile-nav {
+        background:#fff;
+        border-top-color:#dfe3f2;
+        box-shadow:0 -4px 16px #444e8510;
+      }
+      :host([data-mobile-ui="true"]) .mobile-nav-button.active {
+        color:#2347c4;
+        background:linear-gradient(135deg,#e5ecff,#f0edff);
+        box-shadow:inset 0 -3px #315cff;
+      }
+      :host([data-mobile-ui="true"]) .mobile-nav-button.active[data-mobile-target="factors"] { color:#ac337d; background:#fcebf6; box-shadow:inset 0 -3px #e765ac; }
+      :host([data-mobile-ui="true"]) .mobile-nav-button.active[data-mobile-target="results"] { color:#327c49; background:#eaf6e6; box-shadow:inset 0 -3px #75b85a; }
+      :host([data-mobile-ui="true"]) .mobile-nav-button.active[data-mobile-target="settings"] { color:#7750ad; background:#f0eafb; box-shadow:inset 0 -3px #a789d1; }
+      :host([data-mobile-ui="true"]) .section-head h2 { color:var(--ink); border-left:4px solid #315cff; padding-left:9px; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="picker"] > .section-head h2 { border-left-color:#ef5ab5; }
+      :host([data-mobile-ui="true"]) .mobile-data-statement > .section-head h2 { border-left-color:#65b947; }
+      :host([data-mobile-ui="true"]) .primary { background:linear-gradient(115deg,#356aff,#3451e5); box-shadow:0 4px 10px #315cff24; }
+      :host([data-mobile-ui="true"]) .primary:disabled { box-shadow:none; }
+      :host([data-mobile-ui="true"]) .mobile-factor-mode,
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs { background:#f0f1f8; }
+      :host([data-mobile-ui="true"]) .mobile-update-icon,
+      :host([data-mobile-ui="true"]) [data-mobile-check-update],
+      :host([data-mobile-ui="true"]) .mobile-search-head svg,
+      :host([data-mobile-ui="true"]) .mobile-search-head strong { background:#edf1ff; }
+      :host([data-mobile-ui="true"]) .factor-option { display:grid; grid-template-columns:minmax(0,1fr); grid-template-areas:"name" "badge" "mapping"; gap:3px; text-align:left; align-content:start; }
+      :host([data-mobile-ui="true"]) .factor-option-name { grid-area:name; font-size:12px; line-height:1.45; }
+      :host([data-mobile-ui="true"]) .factor-option-state { grid-area:badge; font-size:9px; font-weight:650; }
+      :host([data-mobile-ui="true"]) .factor-option-mapping { font-size:10px; }
+      :host([data-mobile-ui="true"][data-mobile-page="factors"]) .section,
+      :host([data-mobile-ui="true"][data-mobile-page="results"]) .section { border-radius:16px; box-shadow:0 3px 12px #4b488512; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="picker"] > .section-head .helper { display:none; }
+      :host([data-mobile-ui="true"]) #body > .section[data-mobile-factor-order="picker"] > .section-head h2 { font-size:18px; }
+      :host([data-mobile-ui="true"]) .mobile-selected-heading { margin-top:20px; padding-top:12px; border-top:1px solid var(--line); }
+      :host([data-mobile-ui="true"]) .mobile-selected-heading h3 { font-size:15px; }
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs { gap:2px; border-radius:12px; padding:3px; }
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs button { min-height:44px; }
+      :host([data-mobile-ui="true"]) .mobile-tier-tabs button[data-mobile-tier-filter="4"] { color:#9b4a16; }
+      :host([data-mobile-ui="true"]) .selected-list { gap:8px; }
+      :host([data-mobile-ui="true"]) .selected-card { grid-template-columns:minmax(0,1fr); grid-template-areas:"identity" "summary"; gap:6px; min-height:60px; padding:9px; border-radius:12px; align-content:start; }
+      :host([data-mobile-ui="true"]) .selected-name { font-size:12px; line-height:1.4; display:block; overflow:visible; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary span { font-size:10px; }
+      :host([data-mobile-ui="true"]) .mobile-factor-card-summary b { font-size:9px; padding:2px 5px; }
+      :host([data-mobile-ui="true"]) .required-tier .mobile-factor-card-summary b { color:#9b4a16; background:#fff0df; }
+      :host([data-mobile-ui="true"][data-mobile-page="results"]) #results-section { padding:0; background:transparent; box-shadow:none; }
+      :host([data-mobile-ui="true"]) .result-list { gap:14px; }
+      :host([data-mobile-ui="true"]) .result-card { background:#fff; border:1px solid var(--line); box-shadow:0 3px 12px #63864e0a; }
+      :host([data-mobile-ui="true"]) .result-top { padding:10px 12px 0; align-items:center; }
+      :host([data-mobile-ui="true"]) .result-identity { display:grid; justify-items:start; align-content:center; gap:4px; }
+      :host([data-mobile-ui="true"]) .result-name { font-size:15px; line-height:1.4; }
+      :host([data-mobile-ui="true"]) .result-meta { margin-top:0; font-size:11px; line-height:1.4; }
+      :host([data-mobile-ui="true"]) .result-required { display:inline-block; margin-top:0; border-radius:6px; padding:3px 6px; color:var(--brand-dark); background:#eaf7ef; font-size:11px; font-weight:750; }
+      :host([data-mobile-ui="true"]) .result-card[data-required-state="unmet"] .result-required { color:#9b381e; background:#fff0e8; }
+      :host([data-mobile-ui="true"]) .result-card[data-required-state="unmet"] .score-value { color:var(--muted); }
+      :host([data-mobile-ui="true"]) .result-id { font-size:11px; line-height:1.4; color:var(--muted); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; min-width:0; }
+      :host([data-mobile-ui="true"]) .result-copy { min-height:44px; margin-top:4px; padding:0 8px; border:0; background:#edf1ff; border-radius:10px; }
+      :host([data-mobile-ui="true"]) .results-rerun { min-height:44px; border-radius:10px; }
+      :host([data-mobile-ui="true"]) .result-summary { font-size:10px; line-height:1.5; background:transparent; padding-inline:0; }
+      :host([data-mobile-ui="true"]) .match-list { padding:8px 12px 14px; }
+      :host([data-mobile-ui="true"]) .match-chip { padding:7px 8px; font-size:11px; line-height:1.45; }
+      :host([data-mobile-ui="true"]) .factor-chip-stars { font-size:10px; }
+      @media (min-width:600px) and (min-height:600px) {
+        :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body,
+        :host([data-mobile-ui="true"][data-mobile-page="results"]) .panel-body { padding-inline:24px; }
+        :host([data-mobile-ui="true"]) #factor-catalog,
+        :host([data-mobile-ui="true"][data-mobile-factor-color="white"]) #factor-catalog,
+        :host([data-mobile-ui="true"]) .selected-list,
+        :host([data-mobile-ui="true"]) .recognition-list,
+        :host([data-mobile-ui="true"]) .factor-chip-list { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        :host([data-mobile-ui="true"]) .selected-name { font-size:13px; }
+        :host([data-mobile-ui="true"]) .result-name { font-size:18px; }
+        :host([data-mobile-ui="true"]) .result-meta { font-size:12px; }
+        :host([data-mobile-ui="true"]) .score-value { font-size:28px; }
+      }
+      @media (min-width:1000px) and (min-height:600px) {
+        :host([data-mobile-ui="true"][data-mobile-page="factors"]) .panel-body,
+        :host([data-mobile-ui="true"][data-mobile-page="results"]) .panel-body { padding-inline:max(24px,calc((100% - 1120px) / 2)); }
+        :host([data-mobile-ui="true"]) #factor-catalog,
+        :host([data-mobile-ui="true"][data-mobile-factor-color="white"]) #factor-catalog,
+        :host([data-mobile-ui="true"]) .selected-list,
+        :host([data-mobile-ui="true"]) .recognition-list { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        :host([data-mobile-ui="true"]) .factor-chip-list { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      }
       @media (min-width:600px) and (min-height:600px) {
         :host([data-mobile-ui="true"]) .result-top {
           --result-main-avatar:80px;

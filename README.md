@@ -2,7 +2,9 @@
 
 “种马搜索器”的独立 Android 轻量版。它在 App 内完成 B 站游戏登录，并提供针对手机屏幕设计的角色、因子和推荐结果界面。
 
-当前版本为 `v0.1.48`，仍处于测试阶段。
+当前版本为 `v0.1.49`，仍处于测试阶段。
+
+本版更新：多彩几何背景与马蹄铁装饰、紧凑的因子卡片与推荐卡、平板自适应布局；因子修改优先级后自动切换到对应标签；设置页两个更新按钮统一尺寸。
 
 ## 功能
 
@@ -40,7 +42,7 @@
 生成的调试安装包位于：
 
 ```text
-app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.48-debug.apk
+app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.49-debug.apk
 ```
 
 如果本机已安装 Gradle 8.9，也可以运行：
@@ -72,4 +74,4 @@ Gradle 生成的调试安装包位于 `app/build/outputs/apk/debug/app-debug.apk
 
 ## 许可证
 
-本项目采用 [MIT License](./LICENSE)。
+本项目原创代码采用 [MIT License](./LICENSE)。第三方素材不包含在本项目的 MIT 授权范围内，详见 [第三方素材说明](./THIRD_PARTY_NOTICES.md)。
