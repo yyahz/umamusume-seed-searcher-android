@@ -2,7 +2,8 @@
 
 [CmdletBinding()]
 param(
-    [string]$SdkRoot = $env:ANDROID_SDK_ROOT
+    [string]$SdkRoot = $env:ANDROID_SDK_ROOT,
+    [switch]$EnableWebViewDebugging
 )
 
 Set-StrictMode -Version Latest
@@ -10,6 +11,13 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $repoRoot = $projectRoot
+$gradleConfig = Get-Content -LiteralPath (Join-Path $projectRoot 'app/build.gradle') -Raw
+if ($gradleConfig -notmatch 'versionCode\s+(\d+)') { throw '缺少 versionCode。' }
+$versionCode = $Matches[1]
+if ($gradleConfig -notmatch 'versionName\s+"([^"]+)"') { throw '缺少 versionName。' }
+$versionName = $Matches[1]
+$debugFlags = @()
+if ($EnableWebViewDebugging) { $debugFlags = @('--debug-mode') }
 $appRoot = Join-Path $projectRoot 'app'
 $buildRoot = [System.IO.Path]::GetFullPath((Join-Path $appRoot 'build\manual-debug'))
 $outputRoot = [System.IO.Path]::GetFullPath((Join-Path $appRoot 'build\outputs\apk\debug'))
@@ -86,15 +94,22 @@ $unsignedApk = Join-Path $buildRoot 'app-unsigned.apk'
     --java $generatedRoot `
     --min-sdk-version 24 `
     --target-sdk-version 35 `
-    --version-code 52 `
-    --version-name '0.1.51' `
+    @debugFlags `
+    --version-code $versionCode `
+    --version-name $versionName `
     -A (Join-Path $buildRoot 'assets') `
     $compiledZip
 if ($LASTEXITCODE -ne 0) { throw 'APK 资源链接失败。' }
 
+# Windows aapt2 encodes nested asset names with backslashes; jar uses APK-safe '/' paths.
+Copy-Item -LiteralPath (Join-Path $appRoot 'src\main\assets\hint-finder') -Destination (Join-Path $assetsRoot 'hint-finder') -Recurse
+& jar --update --file $unsignedApk -C $buildRoot 'assets'
+if ($LASTEXITCODE -ne 0) { throw '技能资源写入 APK 失败。' }
+
 $javaSources = @(
     (Join-Path $appRoot 'src\main\java\io\github\yyahz\umaseedsearcher\MainActivity.java'),
     (Join-Path $appRoot 'src\main\java\io\github\yyahz\umaseedsearcher\UpdateFileProvider.java'),
+    (Join-Path $appRoot 'src\main\java\io\github\yyahz\umaseedsearcher\HintFinderAssets.java'),
     (Join-Path $generatedRoot 'io\github\yyahz\umaseedsearcher\R.java')
 )
 & javac --release 17 -encoding UTF-8 -classpath $androidJar -d $classesRoot @javaSources
@@ -134,7 +149,7 @@ if (-not (Test-Path -LiteralPath $debugKeystore -PathType Leaf)) {
     if ($LASTEXITCODE -ne 0) { throw '调试签名生成失败。' }
 }
 
-$finalApk = Join-Path $outputRoot 'uma-seed-searcher-android-v0.1.51-debug.apk'
+$finalApk = Join-Path $outputRoot "uma-seed-searcher-android-v$versionName-debug.apk"
 & $apksigner sign `
     --ks $debugKeystore `
     --ks-pass 'pass:android' `

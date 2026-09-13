@@ -1,0 +1,6 @@
+{
+  "source": "hint-finder/dist",
+  "revision": "f3496c3919e973a8d7f5a4f253e33b3b14ca9b06",
+  "adaptation": "android.css, embedded.js and their HTML references; app.mjs adapted for touch, lower-skill highlights and embedded paging",
+  "dataSnapshot": "2026-08-01T21:03:26+08:00"
+}

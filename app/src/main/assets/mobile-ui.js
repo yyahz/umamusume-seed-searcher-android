@@ -4,26 +4,30 @@
   if (globalThis.__UMA_SEED_SEARCHER_MOBILE_UI__) return;
 
   const ICONS = {
+    hints: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="m12 6 1.5 4 4 .5-3 2.8.8 4.2-3.3-2-3.3 2 .8-4.2-3-2.8 4-.5Z"/></svg>',
     roles: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/></svg>',
     factors: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="2"/><rect x="14" y="4" width="6" height="6" rx="2"/><rect x="4" y="14" width="6" height="6" rx="2"/><rect x="14" y="14" width="6" height="6" rx="2"/></svg>',
     results: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><path d="m3.5 6 .8.8L6 5M3.5 12l.8.8L6 11M3.5 18l.8.8L6 17"/></svg>',
     settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h5M15 6h5M4 12h9M17 12h3M4 18h3M11 18h9"/><circle cx="12" cy="6" r="2.5"/><circle cx="15" cy="12" r="2.5"/><circle cx="9" cy="18" r="2.5"/></svg>'
   };
-  const PAGE_ORDER = ["roles", "factors", "results", "settings"];
+  const PAGE_ORDER = ["roles", "factors", "results", "hints", "settings"];
   const PAGE_LABELS = {
+    hints: "技能",
     roles: "角色",
     factors: "因子",
     results: "结果",
     settings: "设置"
   };
   const FACTOR_MODE_STORAGE_KEY = "uma-seed-mobile-factor-mode";
-  const APP_VERSION = "0.1.51";
+  const APP_VERSION = "0.1.52";
   const PROJECT_URL = "https://github.com/yyahz/umamusume-seed-searcher-android";
   const VERSION_SOURCE_URL = `${PROJECT_URL.replace("https://github.com", "https://raw.githubusercontent.com")}/main/app/build.gradle`;
   const BWIKI_URL = "https://wiki.biligame.com/umamusume/";
   const TOOL_EXTERNAL_URL = "https://game.bilibili.com/tool/pd/?uma_seed_external=1";
 
   let activePage = "roles";
+  let hintOverlayOpen = false;
+  let beforeHints = "roles";
   let rolePage = 0;
   let applyScheduled = false;
   let awaitingResults = false;
@@ -642,7 +646,10 @@
     const ui = findUi();
     if (!ui || !PAGE_ORDER.includes(page)) return false;
     if (!options.skipSave) scrollPositions.set(activePage, ui.body.scrollTop);
+    if (page === "hints" && activePage !== "hints") beforeHints = activePage;
     activePage = page;
+    const hintFrame = ui.root.getElementById("mobile-hints-frame");
+    if (page === "hints" && !hintFrame.hasAttribute("src")) hintFrame.src = "https://appassets.androidplatform.net/index.html";
     ui.host.dataset.mobilePage = page;
     mapSections(ui);
     const pageName = PAGE_LABELS[page];
@@ -668,9 +675,15 @@
 
     globalThis.__UMA_SEED_SEARCHER_MOBILE_UI__ = {
       back() {
-        const index = PAGE_ORDER.indexOf(activePage);
+        if (activePage === "hints") {
+          if (hintOverlayOpen) ui.root.getElementById("mobile-hints-frame").contentWindow.postMessage({type:"uma-hints-back"},"https://appassets.androidplatform.net");
+          else activate(beforeHints, {resetScroll:false});
+          return true;
+        }
+        const backPages = PAGE_ORDER.filter(page => page !== "hints");
+        const index = backPages.indexOf(activePage);
         if (index <= 0) return false;
-        activate(PAGE_ORDER[index - 1], { resetScroll: false });
+        activate(backPages[index - 1], { resetScroll: false });
         return true;
       },
       activate
@@ -1169,7 +1182,7 @@
         bottom:0;
         min-height:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
         display:grid;
-        grid-template-columns:repeat(4,1fr);
+        grid-template-columns:repeat(5,1fr);
         align-items:start;
         gap:4px;
         padding:7px 8px calc(6px + env(safe-area-inset-bottom));
@@ -1404,13 +1417,28 @@
         :host([data-mobile-ui="true"]) #priority-list .priority-item.drag-settling { transition:none; }
       }
     `;
+    style.textContent += `
+      :host([data-mobile-ui="true"]) #mobile-hints-frame{display:none;position:absolute;inset:0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));width:100%;height:calc(100% - var(--mobile-nav-height) - env(safe-area-inset-bottom));border:0;background:transparent}
+      :host([data-mobile-page="hints"]) #mobile-hints-frame{display:block}
+      :host([data-mobile-page="hints"]) .panel-header,:host([data-mobile-page="hints"]) #body{display:none!important}
+      :host([data-mobile-ui="true"]) .mobile-nav-button.active[data-mobile-target="hints"]{color:#b07916;background:#fff5d9;box-shadow:inset 0 -3px #dfb947}
+    `;
     ui.root.appendChild(style);
+    const hintFrame = document.createElement("iframe");
+    hintFrame.id = "mobile-hints-frame";
+    hintFrame.title = "支援卡技能检索";
+    hintFrame.setAttribute("sandbox","allow-scripts allow-same-origin");
+    ui.panel.appendChild(hintFrame);
+    window.addEventListener("message",event=>{
+      if(event.origin!=="https://appassets.androidplatform.net" || event.source!==hintFrame.contentWindow)return;
+      if(event.data?.type==="uma-hints-overlay") hintOverlayOpen=Boolean(event.data.open);
+    });
 
     const nav = document.createElement("nav");
     nav.className = "mobile-nav";
     nav.setAttribute("role", "tablist");
     nav.setAttribute("aria-label", "主要页面");
-    nav.innerHTML = PAGE_ORDER.map((page) => `
+    nav.innerHTML = ["roles", "factors", "results", "hints", "settings"].map((page) => `
       <button class="mobile-nav-button" type="button" role="tab" data-mobile-target="${page}" aria-label="${PAGE_LABELS[page]}" aria-selected="${page === activePage}">
         ${ICONS[page]}<span>${PAGE_LABELS[page]}</span><span class="mobile-nav-badge" hidden></span>
       </button>
