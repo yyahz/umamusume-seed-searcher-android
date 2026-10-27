@@ -1,6 +1,33 @@
 {
-  "source": "hint-finder/dist",
-  "revision": "f3496c3919e973a8d7f5a4f253e33b3b14ca9b06",
-  "adaptation": "android.css, embedded.js and their HTML references; app.mjs adapted for touch, lower-skill highlights and embedded paging",
-  "dataSnapshot": "2026-08-01T21:03:26+08:00"
+  "source": "yyahz/umamusume-seed-optimizer",
+  "revision": "695b03d8d2f1ea89a1c19a29ac28ddc4f18826cf",
+  "pcVersion": "0.19.2",
+  "adaptation": "Android stylesheet, fixed-origin embedded messaging and mobile shell remain local; catalog metadata updates About text; test imports use Android assets",
+  "dataSnapshot": "2026-10-22T14:12:17.697Z",
+  "availableThrough": "2026-10-22",
+  "cards": 325,
+  "skills": 345,
+  "sourceHashes": {
+    "page-bridge.js": "7ebb63e8b6f2750a25c9938307c44f2ca613ebb1fcc074356ff8f2c797255723",
+    "ranking.js": "c49624477db936b1613356a591f16f908658388b55a7b746562fbb23b01b34cf",
+    "gold-skill-map.js": "b790d24ac5880804d517296890720a2aee44eca89c932bb6b64cb0d648ed1b5a",
+    "traditional-name-map.js": "885d33ef6b5ad14ce51e7399775fe8018bedacd52997dc2188ac268df9a3e9c0",
+    "factor-recognizer.js": "fb178416463ed636fce12dafed3562cbf84e9120496b58f36c7abda4745ffa08",
+    "request-guard.js": "9a00b0a96682378fdbef23e6506cd84cb88e46d57185bbd19f06c62de6b7dd77",
+    "tests/factor-recognizer.test.cjs": "a12a3715b25bfe8534ed3288aa2db9f34180561d221ef74ebcc38b270df3baea",
+    "tests/ranking.test.cjs": "e5412e07ebbe7478c58b68624a5bb5b6940ab3fae310009735f91c56df06a7f2",
+    "tests/request-guard.test.cjs": "ed582d62f9ee455db56d37b41df5c358b3f11bc6d81a832b52ba039047692f73",
+    "tests/gold-skill-map.test.cjs": "164f7fdc067b8f398ca1e17b79b83dded8d625b27a70da01b867e3b65589822a",
+    "tests/traditional-name-map.test.cjs": "85aad4c9966c87814d33049352959f50af1942c67a7a6c6ebf25aff4aa24b353",
+    "tests/hint-finder.test.mjs": "162f381300b42fdac0e05a9a283beeac29eab1c29fc03e2d0a8181f20c5d41af",
+    "hint-finder/app.mjs": "1ded9ce3e2b422b99c71892dbd14eb06af6a34bbc845e0ea38ea0a1132bbe837",
+    "hint-finder/search.mjs": "4363cedddec7ad8abaa0abaf90bd7ea4ec0088a66a4cae1fcfb6fb02a9eedfee",
+    "hint-finder/style.css": "53b462af6c7cb7bb295847399e9e72d1b22d0867393bc28f1e2dd13bdbf2fcab",
+    "hint-finder/refinement.css": "be982e4d9604cf78327138a7f0777b9d7bb4314bf8f17fb25fb90720164bcfb7",
+    "hint-finder/assets/facets.svg": "8041e1c277748a4b2fa3ae8d69de4c5a0da69884cc18807c47ff4e9050384c9a",
+    "hint-finder/assets/favicon.svg": "d4291760a3777a5e956ca40217c0c47e41aab53b6089cd1866553dbe9e7785ad",
+    "hint-finder/assets/horseshoes.svg": "6e8eb734a0edab641f4dedc7ae992621c9a79a53560eeaf82700b274f562fcd8",
+    "hint-finder/data/cn.json": "a14ce5b694f240b55733ba05a45254e5040744d07a52a73c843c194f699ef839",
+    "hint-finder/index.html": "72f043a2f1e45c5df915b6091da051b7e1d0d60131fa4e52d3585cd6a480bd87"
+  }
 }

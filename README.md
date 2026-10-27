@@ -2,9 +2,9 @@
 
 “种马搜索器”的独立 Android 轻量版。它在 App 内完成 B 站游戏登录，并提供针对手机屏幕设计的角色、因子和推荐结果界面。
 
-当前版本为 `v0.1.52`，仍处于测试阶段。
+当前版本为 `v0.1.54`，仍处于测试阶段。
 
-本版本增加“技能”入口。技能检索页面和简中服快照随 APK 打包，不需要登录；卡面与技能图标仍通过原图片服务加载。
+本版本同步 PC v0.19.2，共收录 325 张支援卡、345 个技能。相比上一公开版本 v0.1.52，新增 25 张支援卡和 35 个技能。技能资料随 APK 打包，卡面和图标需要网络。
 
 ## 功能
 
@@ -12,7 +12,7 @@
 - 分别设置蓝、红、绿、白因子条件，以及家系和本体最低星级。
 - 支持攻略技能清单智能识别、长篇连续 OCR 文本恢复、繁中名称转换、错漏字容错和精确标点消歧。
 - 选择金技能时自动使用对应的下位白技能因子。
-- 映射与 PC 版 2026-09-08 快照同步：190 组金技能下位关系、1,097 条简繁名称对照，支持 U.A.F. 剧本及“运动员之魂”等新增因子。优先按工具箱因子编号核对名称；逐项搜索和智能识别共用别名，金技能查询使用实际下位白因子编号。基础目录仍实时读取，映射随 App 打包。
+- 映射与 PC 版 2026-10-22 核对结果同步：190 组金技能下位关系、1,097 条简繁名称对照、734 条因子编号别名，支持 U.A.F. 剧本及“运动员之魂”等新增因子。优先按工具箱因子编号核对名称；逐项搜索和智能识别共用别名，金技能查询使用实际下位白因子编号。基础目录仍实时读取，映射随 App 打包。
 - 使用“角色 / 因子 / 结果 / 技能 / 设置”导航；顶部品牌信息仅在角色搜索入口显示，设置页提供版本更新与数据服务声明。
 - 智能识别下方仍可继续手动选择；蓝、红因子直接完整显示，绿、白因子保留搜索和每批 8 项的翻页浏览。
 - 手机端已选因子按高、中、低、必需标签切换，蓝、红、绿、白四类因子均可设为必需硬门槛；以双列小卡展示，点击小卡即可在底部面板修改星级和优先级。
@@ -33,7 +33,7 @@
 
 需要 JDK 17 或更高版本，以及包含 Android 35 平台和 Build Tools 35.0.0 的 Android SDK。
 
-在 PowerShell 中运行：
+在 PowerShell 7 中运行：
 
 ```powershell
 .\scripts\build-debug.ps1 -SdkRoot "C:\Android\Sdk"
@@ -42,7 +42,7 @@
 生成的调试安装包位于：
 
 ```text
-app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.52-debug.apk
+app/build/outputs/apk/debug/uma-seed-searcher-android-v0.1.54-debug.apk
 ```
 
 如果本机已安装 Gradle 8.9，也可以运行：
@@ -78,10 +78,28 @@ Gradle 生成的调试安装包位于 `app/build/outputs/apk/debug/app-debug.apk
 
 ## 本地技能检索集成
 
-“技能”是原有底部导航中的内嵌标签页，不启动新 Activity，切换时保留搜索条件、页码和种马页面状态。复用网页版的单技能替换、○／◎ 合并、金技能／仅下位白技能按钮切换和独立底部分页；卡片只预览少量技能，详情显示完整列表。数据为 2026-08-01 快照（300 张卡、310 个技能），不是实时完整目录。
+“技能”是原有底部导航中的内嵌标签页，切换时保留搜索条件、页码和种马页面状态。每次选择新技能都会替换旧检索。○／◎ 合并检索，金技能和仅下位白技能分组显示，各自使用底部分页。卡片只预览少量技能，详情显示完整列表。
+
+数据与 PC v0.19.2 同步。保留工具箱 2026-08-01 归档的 300 张卡，按 BWIKI 截至 2026-10-22 的资料增补 25 张卡，共 325 张卡、345 个技能。37 张未来日期或占位卡未纳入检索。资料为静态快照，未收录不代表无法获得。
+
+本轮没有模拟器。已完成代码、数据和 APK 检查，尚未验证 v0.1.54 在设备上的安装、触摸、键盘避让和系统返回行为。
 
 资源位于 `app/src/main/assets/hint-finder/`，采用独立 HTTPS 资源域 `appassets.androidplatform.net`，通过 Android Assets 响应，不需要本地服务器或线上站点。页面采用受限 iframe 与独立资源域隔离 DOM 和样式，只接受来自固定父页面的返回消息。使用原 WebView 的现有原生桥，不新增桥方法。`android.css` 统一为原 App 的圆角、间距和透明背景，共用底部导航；`embedded.js` 协调详情及候选列表的系统返回行为。
 
-需要同步同级 `hint-finder` 项目时运行 `node scripts/sync-hint-finder.mjs`；复制共享文件后，由 `scripts/adapt-hint-finder.mjs` 应用 Android 触摸兼容、下位技能高亮和嵌入分页适配，并为 HTML 注入 Android 样式与嵌入交互脚本引用；适配点不存在时中止同步，避免静默覆盖。来源版本写入 `PROVENANCE.json`。Gradle 直接打包 assets；手工构建脚本使用 jar 写入嵌套资源，避免 Windows aapt2 的路径分隔符问题。手工脚本默认关闭应用和 WebView 调试；仅本地排查时显式传入 `-EnableWebViewDebugging`。发布沿用已有签名及 `-debug.apk` 文件名，必须同步 `downloads/uma-seed-searcher-android-latest.apk` 与 Release 附件。发布前校验签名与上一版一致，禁止提交 `.local` 中的私钥或测试材料。
+运行 `node scripts/sync-hint-finder.mjs` 可同步同级 `browser-extension` 维护目录。同步范围包括共享搜索模块、金白技能及繁简映射、技能检索代码、资料和回归测试。脚本先验证技能引用、实装日期和原始归档，再写入文件；写入失败时恢复旧文件。
+
+安卓专用的 `content.js`、`mobile-ui.js`、`android.css` 和 `embedded.js` 独立保留。HTML 使用安卓样式，数据说明中的数量和日期跟随目录元数据更新。`PROVENANCE.json` 记录来源版本和实际文件哈希，也可追溯 PC 尚未提交的资料。
+
+Gradle 直接打包 assets。手工构建脚本使用 jar 写入嵌套资源，避免 Windows aapt2 的路径分隔符问题。手工脚本默认关闭应用和 WebView 调试，本地排查时可显式传入 `-EnableWebViewDebugging`。
+
+发布沿用已有签名和 `-debug.apk` 文件名。发布时须同步 `downloads/uma-seed-searcher-android-latest.apk` 与 Release 附件，并校验签名与上一版一致。`.local` 中的私钥和测试材料不提交到仓库。
 
 本地验证记录见 [技能页测试记录](docs/hint-finder-local-test.md)。
+
+同步后运行全部回归测试（显式枚举文件以兼容 Node 22）：
+
+```powershell
+node scripts/sync-hint-finder.mjs
+$tests = @(Get-ChildItem tests/*.test.* | Sort-Object Name | ForEach-Object FullName)
+node --test @tests
+```

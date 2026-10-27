@@ -20,8 +20,8 @@
 body { background: #f4f6fb; position: relative; isolation: isolate; }
 body::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: url('/assets/horseshoes.svg') center top / 480px 560px,
-    url('/assets/facets.svg') center top / 800px 1013px;
+  background: url('./assets/horseshoes.svg') center top / 480px 560px,
+    url('./assets/facets.svg') center top / 800px 1013px;
   opacity: .27;
 }
 .site-header { background: #ffffffed; border-bottom-width: 2px; }
